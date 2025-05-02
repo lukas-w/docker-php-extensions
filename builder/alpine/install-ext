@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+set -e
+
+export PATH="/usr/lib/ccache/bin:${PATH}"
+
+if [ -z "$IPE_VERSION" ]; then
+  IPE_URL="https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions"
+else
+  IPE_URL="https://github.com/mlocati/docker-php-extension-installer/releases/download/$IPE_VERSION/install-php-extensions"
+fi
+curl -sSLf --output install-php-extensions "$IPE_URL"
+
+export IPE_KEEP_SYSPKG_CACHE=1
+export IPE_LZF_BETTERCOMPRESSION=1
+. install-php-extensions

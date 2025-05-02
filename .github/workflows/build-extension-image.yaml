@@ -1,0 +1,118 @@
+name: Build extension
+on:
+  workflow_dispatch:
+    inputs:
+      ext_name:
+        description: Name of the PHP extension to build
+        required: true
+        type: string
+      ext_version:
+        description: Version of the PHP extension to build
+        required: true
+        type: string
+      php:
+        required: true
+        type: string
+        description: PHP version in the format '8.1', '8.2', etc.
+      os:
+        required: false
+        type: string
+        default: 'alpine3.21'
+        description: OS variant to build for
+      platforms:
+        required: false
+        type: string
+        default: 'linux/amd64'
+        description: Comma-separated list of platforms to build for
+      push:
+        required: false
+        type: boolean
+        default: false
+        description: Whether to push the built image to the registry
+#  workflow_dispatch:
+#    inputs: *inputs
+env:
+  IMAGE_DOMAIN: ghcr.io
+  IMAGE_NAMESPACE: ${{ github.repository_owner }}
+  IMAGE_SOURCE: ${{ github.server_url }}/${{ github.repository }}
+  TARGET: ${{ inputs.php }}-${{ inputs.os }}
+jobs:
+#  matrix:
+#    runs-on: ubuntu-24.04
+#    outputs:
+#        matrix: ${{ steps.get-matrix.outputs.result }}
+#        tags: ${{ steps.get-tags.outputs.result }}
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - name: Fetch dependencies
+#        run: |
+#          make all
+#          composer install --no-interaction
+#
+#      - name: Get tags
+#        id: get-tags
+#        run: |
+#          {
+#            echo 'result<<EOF'
+#            php src/builder/main.php get-extension-tags ${{ inputs.extension }}
+#            echo EOF
+#          } >> "$GITHUB_OUTPUT"
+#
+#      - name: Get build matrix
+#        id: get-matrix
+#        run: |
+#          {
+#            echo 'result<<EOF'
+#            php src/builder/main.php matrix ${{ inputs.php }} ${{ inputs.extension }} ${{ env.OS }} ${{ env.PLATFORM }}
+#            echo EOF
+#          } >> "$GITHUB_OUTPUT"
+
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Fetch dependencies
+        run: |
+          make all
+          composer install --no-interaction
+
+      - name: Get tags to push
+        id: get-tags
+        run: |
+          {
+            echo 'result<<EOF'
+            php src/builder/main.php get-image-refs ${{ inputs.ext_name }}-${{ inputs.ext_version }} ${{ env.TARGET }}
+            echo -e "\nEOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: builder/alpine
+          build-contexts: |
+            ipe=./ipe
+          build-args: |
+            EXT_NAME=${{ inputs.ext_name }}
+            EXT_VERSION=${{ inputs.ext_version }}
+            PHP_VERSION=${{ inputs.php }}
+            OS_REF=${{ inputs.os }}
+          push: ${{ inputs.push }}
+          tags: ${{ join(fromJson(steps.get-tags.outputs.result), ',') }}
+          platforms: ${{ inputs.platforms }}
+          labels: |
+            org.opencontainers.image.source=${{ env.IMAGE_SOURCE }}
+          cache-from: gha
+          cache-to: type=gha,mode=max
