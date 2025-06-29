@@ -1,6 +1,6 @@
 name: Build extension
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       ext_name:
         description: Name of the PHP extension to build

@@ -1,0 +1,36 @@
+#on:
+#  push:
+on:
+  workflow_dispatch:
+env:
+  IMAGE_DOMAIN: ghcr.io
+  IMAGE_NAMESPACE: ${{ github.repository_owner }}
+  IMAGE_SOURCE: ${{ github.repositoryUrl }}
+jobs:
+  list-extensions:
+    runs-on: ubuntu-24.04
+    outputs:
+      extensions: ${{ steps.get-extensions.outputs.result }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get list of extensions
+        id: get-extensions
+        run: |
+          make all
+          composer install --no-interaction
+          
+          {
+            echo 'result<<EOF'
+            php builder/main.php list-extensions
+            echo -e "\nEOF"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    strategy:
+      matrix:
+        ext: ${{ fromJson(needs.list-extensions.outputs.extensions) }}
+    uses: ./.github/workflows/build-extension-images.yaml
+    with:
+      ext_name: ${{ matrix.ext.name }}
