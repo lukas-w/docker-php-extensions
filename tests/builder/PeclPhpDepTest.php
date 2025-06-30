@@ -64,9 +64,11 @@ XML;
 	public function testSatisfiedBy()
 	{
 		$dep = new PeclPhpDep('7.2.0', '8.4.0', ['8.4.0']);
+		$this->assertTrue($dep->satisfiedBy('7.2'));
 		$this->assertTrue($dep->satisfiedBy('7.2.0'));
 		$this->assertTrue($dep->satisfiedBy('8.3.0'));
 		$this->assertFalse($dep->satisfiedBy('8.4.0'));
+		$this->assertFalse($dep->satisfiedBy('8.4'));
 		$this->assertFalse($dep->satisfiedBy('8.5.0'));
 	}
 }

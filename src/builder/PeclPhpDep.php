@@ -18,14 +18,14 @@ class PeclPhpDep
 	{
 		$min = $this->min ?? null;
 		$max = $this->max ?? null;
-		if ($min && version_compare($phpVersion, $min, '<')) {
+		if ($min && VersionTools::compare($phpVersion, $min, '<')) {
 			return false;
 		}
-		if ($max && version_compare($phpVersion, $max, '>')) {
+		if ($max && VersionTools::compare($phpVersion, $max, '>')) {
 			return false;
 		}
 		foreach ($this->exclude ?? [] as $excl) {
-			if (version_compare($phpVersion, $excl, '==')) {
+			if (VersionTools::compare($phpVersion, $excl, '==')) {
 				return false;
 			}
 		}

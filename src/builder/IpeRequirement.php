@@ -30,13 +30,13 @@ class IpeRequirement
 			$tests[] = $this->osId === $osId;
 		}
 		if ($this->osVersion) {
-			$tests[] = version_compare($osVersion, $this->osVersion, '==');
+			$tests[] = VersionTools::compare($osVersion, $this->osVersion, '==');
 		}
 		if ($this->phpVersion) {
 			if (! $phpVersion) {
 				throw new InvalidArgumentException("no phpVersion provided");
 			}
-			$tests[] = version_compare($phpVersion, $this->phpVersion, '==');
+			$tests[] = VersionTools::compare($phpVersion, $this->phpVersion, '==');
 		}
 
 		if ($this->negated) {

@@ -4,6 +4,36 @@ namespace dpe\builder;
 
 class VersionTools
 {
+	public static function normalize(string $version): string
+	{
+		// Normalize version strings like version_compare does
+		$version = str_replace(['_', '-', '+'], '.', $version);
+		// Insert dots before and after any non-number
+		$version = preg_replace(
+			'/(?<=\d)(?![\d\.])(?!$)|(?<!^)(?<![\d\.])(?=[\d])/',
+			'.',
+			$version
+		);
+		return $version;
+	}
+
+	public static function compare(string $a, string $b, string $operator): bool
+	{
+		// Normalize version strings by replacing underscores, dashes, and pluses with dots
+		$a = explode('.', self::normalize($a));
+		$b = explode('.', self::normalize($b));
+
+		$l = max(count($a), count($b));
+		$a = array_pad($a, $l, '0'); // Pad with zeros to equal length
+		$b = array_pad($b, $l, '0'); // Pad with zeros to equal length
+
+		return version_compare(
+			implode('.', $a),
+			implode('.', $b),
+			$operator
+		);
+	}
+
 	/// From a list of version strings, creates a mapping of version strings to
 	/// arrays of compatible higher-level version tags.
 	/// E.g. [1.0.0, 1.0.1] will return [1.0.0 => ['1.0.0'], 1.0.1 => ['1.0.1', '1.0', '1']]
