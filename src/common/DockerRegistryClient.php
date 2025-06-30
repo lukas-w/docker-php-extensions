@@ -10,8 +10,8 @@ class DockerRegistryClient
 	protected HttpClient $client;
 
 	public function __construct(
-		string  $baseUrl,
-		?string $auth = null,
+		private readonly string $baseUrl,
+		?string                 $auth = null,
 	)
 	{
 		$this->client = new DockerRegistryHttpClient($baseUrl, $auth);
@@ -35,6 +35,10 @@ class DockerRegistryClient
 			return $r['tags'] ?? [];
 		} catch (RuntimeException $e) {
 			if ($e->getCode() === 404) {
+				return [];
+			}
+			if (str_starts_with($this->baseUrl, "https://ghcr.io") && $e->getPrevious()?->getCode() === 403) {
+				// ghcr.io returns authentication errors for images that don't exist
 				return [];
 			}
 			throw $e;
