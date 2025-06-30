@@ -2,6 +2,7 @@ ARG PHP_VERSION
 ARG OS_REF
 FROM php:${PHP_VERSION}-${OS_REF} AS builder
 ARG TARGETPLATFORM
+ARG OS_REF
 
 ENV CCACHE_DIR=/tmp/ccache
 ENV METADATA_DIR=/usr/local/share/php-exts
