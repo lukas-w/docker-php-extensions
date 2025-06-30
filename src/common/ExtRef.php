@@ -6,7 +6,7 @@ use RuntimeException;
 
 class ExtRef
 {
-	private const VERSION_REGEX = '(?<version>[\d\.]+)';
+	private const VERSION_REGEX = '(?<version>bundled|[\d\.]+)';
 	private const CHANNELS = [
 		'alpha',
 		'beta',
@@ -25,12 +25,17 @@ class ExtRef
 		if (empty($this->name)) {
 			throw new \InvalidArgumentException("Extension name cannot be empty");
 		}
-		if ($this->version !== null && !preg_match('/^'.self::VERSION_REGEX.'$/', $this->version)) {
+		if ($this->version !== null && !preg_match('/^' . self::VERSION_REGEX . '$/', $this->version)) {
 			throw new \InvalidArgumentException("Invalid version format: $this->version");
 		}
 		if ($this->channel !== null && !in_array($this->channel, self::CHANNELS, true)) {
 			throw new \InvalidArgumentException("Invalid channel: $this->channel");
 		}
+	}
+
+	public function isBundled(): bool
+	{
+		return $this->version === 'bundled';
 	}
 
 	public function __toString(): string
@@ -47,11 +52,21 @@ class ExtRef
 	/// in the form of <name>[-[^]<version>[@channel]]
 	public static function parse(string $ref): self
 	{
-
 		$parts = explode('-', $ref);
 		$name = implode('-', array_slice($parts, 0, -1));
 
 		$version_spec = count($parts) > 1 ? $parts[count($parts) - 1] : null;
+
+		if (!$version_spec) {
+			return new self($ref);
+		}
+
+		if ($version_spec === 'bundled') {
+			return new self(
+				name: $name,
+				version: 'bundled',
+			);
+		}
 
 		$channels = [
 			'alpha',
@@ -79,7 +94,9 @@ class ExtRef
 				return new self(
 					name: $name,
 					version: $matches['version'] ?? null,
-					compatible: isset($matches['compatible']),
+					compatible: str_contains($variant, '<compatible>')
+						? isset($matches['compatible'])
+						: null,
 					channel: $matches['channel'] ?? null
 				);
 			}

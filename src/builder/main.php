@@ -72,7 +72,19 @@ function printConfigs(string $extension, array $phpVersions, array $osTargets, a
 function matrix(string $extension, array $phpVersions, array $osTargets, array $platforms): void
 {
 	global $pecl, $ipeData;
-	$extVersions = $pecl->getStableVersions($extension);
+
+	$bundled = false;
+	try {
+		$extVersions = $pecl->getStableVersions($extension);
+	} catch (RuntimeException $e) {
+		if ($e->getCode() === 404 && $ipeData->isExtensionSupported($extension)) {
+			// Bundled extension not in PECL
+			$bundled = true;
+			$extVersions = ['bundled'];
+		} else {
+			throw $e;
+		}
+	}
 
 	$phpVersions = array_filter($phpVersions, fn($v) => $ipeData->isPhpVersionSupported($extension, $v));
 
@@ -91,14 +103,16 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 		}
 	}
 
-	foreach ($extVersions as $extVersion) {
-		$deps = $pecl->phpDependencies($extension, $extVersion);
-		foreach ($phpVersions as $php) {
-			if (!$deps->satisfiedBy($php)) {
-				$m = $m->exclude([
-					'ext_version' => $extVersion,
-					'php' => $php,
-				]);
+	if (!$bundled) {
+		foreach ($extVersions as $extVersion) {
+			$deps = $pecl->phpDependencies($extension, $extVersion);
+			foreach ($phpVersions as $php) {
+				if (!$deps->satisfiedBy($php)) {
+					$m = $m->exclude([
+						'ext_version' => $extVersion,
+						'php' => $php,
+					]);
+				}
 			}
 		}
 	}
@@ -273,9 +287,14 @@ function main(): int
 		$extRef = ExtRef::parse($extension);
 		$target = array_shift($argv);
 		$target = Target::fromString($target);
+
+		if ($extRef->isBundled()) {
+			$tags = ['bundled' => ['']];
+		} else {
+			$versions = (new PeclClient())->getStableVersions($extRef->name);
+			$tags = VersionTools::getVersionTags($versions);
+		}
 		global $config;
-		$versions = (new PeclClient())->getStableVersions($extRef->name);
-		$tags = VersionTools::getVersionTags($versions);
 		$tags = array_map(
 			fn($versions) => array_map(fn($v) => $config->imageRef($target, $extRef->name, $v), $versions),
 			$tags,
