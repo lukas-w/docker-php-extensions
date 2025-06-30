@@ -76,6 +76,7 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 	$bundled = false;
 	try {
 		$extVersions = $pecl->getStableVersions($extension);
+		$extVersions = VersionTools::getLatestPatchVersions($extVersions);
 	} catch (RuntimeException $e) {
 		if ($e->getCode() === 404 && $ipeData->isExtensionSupported($extension)) {
 			// Bundled extension not in PECL

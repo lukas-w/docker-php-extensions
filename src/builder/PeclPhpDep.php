@@ -23,14 +23,14 @@ class PeclPhpDep
 	{
 		$min = $this->min ?? null;
 		$max = $this->max ?? null;
-		if ($min && VersionTools::compare($phpVersion, $min, '<')) {
+		if ($min && VersionTools::compare($phpVersion, $min) < 0) {
 			return false;
 		}
-		if ($max && VersionTools::compare($phpVersion, $max, '>')) {
+		if ($max && VersionTools::compare($phpVersion, $max) > 0) {
 			return false;
 		}
 		foreach ($this->exclude ?? [] as $excl) {
-			if (VersionTools::compare($phpVersion, $excl, '==')) {
+			if (VersionTools::compare($phpVersion, $excl) === 0) {
 				return false;
 			}
 		}
@@ -47,7 +47,7 @@ class PeclPhpDep
 			min: (string)$depElm->min,
 			max: (string)$depElm->max,
 			exclude: array_values(array_filter(
-				iterator_to_array($depElm->exclude, preserve_keys: false),
+				array_map(fn($v) => (string)$v, iterator_to_array($depElm->exclude, preserve_keys: false)),
 			)),
 		);
 	}

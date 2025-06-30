@@ -16,8 +16,8 @@ class VersionToolsTest extends TestCase
 
 	public function testCompare(): void
 	{
-		$this->assertTrue(VersionTools::compare('1.2.3', '1.2.3', '='));;
-		$this->assertTrue(VersionTools::compare('1.2', '1.2.0', '='));;
+		$this->assertEquals(0, VersionTools::compare('1.2.3', '1.2.3'));
+		$this->assertEquals(0, VersionTools::compare('1.2', '1.2.0'));
 	}
 
 	public function testGetVersionTags(): void
@@ -44,5 +44,15 @@ class VersionToolsTest extends TestCase
 			'2.1.1' => ['2.1.1', '2.1', '2', ''],
 		];
 		$this->assertEquals($expected, $tags);
+	}
+
+	public function testGetLatestPatchVersions(): void
+	{
+		$this->assertEquals(
+			['1.2.3', '1.1.15'],
+			VersionTools::getLatestPatchVersions(
+				['1.2.3', '1.2.2', '1.2.1', '1.1.15', '1.1.15-rc', '1.1.5']
+			)
+		);
 	}
 }

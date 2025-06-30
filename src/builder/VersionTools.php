@@ -17,7 +17,12 @@ class VersionTools
 		return $version;
 	}
 
-	public static function compare(string $a, string $b, string $operator): bool
+	public static function components(string $version): array
+	{
+		return explode('.', self::normalize($version));
+	}
+
+	public static function compare(string $a, string $b): int
 	{
 		// Normalize version strings by replacing underscores, dashes, and pluses with dots
 		$a = explode('.', self::normalize($a));
@@ -27,11 +32,32 @@ class VersionTools
 		$a = array_pad($a, $l, '0'); // Pad with zeros to equal length
 		$b = array_pad($b, $l, '0'); // Pad with zeros to equal length
 
-		return version_compare(
+		$lt = version_compare(
 			implode('.', $a),
 			implode('.', $b),
-			$operator
+			'<'
 		);
+		if ($lt) {
+			return -1;
+		}
+
+		if (version_compare(
+			implode('.', $a),
+			implode('.', $b),
+			'>'
+		)) {
+			return 1;
+		}
+		return 0;
+	}
+
+	public static function sort(array $versions, bool $newestFirst = true): array
+	{
+		usort($versions, static fn($a, $b) => self::compare($a, $b));
+		if ($newestFirst) {
+			$versions = array_reverse($versions);
+		}
+		return $versions;
 	}
 
 	/// From a list of version strings, creates a mapping of version strings to
@@ -39,8 +65,7 @@ class VersionTools
 	/// E.g. [1.0.0, 1.0.1] will return [1.0.0 => ['1.0.0'], 1.0.1 => ['1.0.1', '1.0', '1']]
 	public static function getVersionTags(array $versions, array $levels = [2, 1]): array
 	{
-		usort($versions, 'version_compare');
-		$versions = array_reverse($versions);
+		self::sort($versions);
 
 		$tags = array_map(fn($v) => [$v], $versions);
 
@@ -66,5 +91,24 @@ class VersionTools
 			$result[$t[0]] = $t;
 		}
 		return $result;
+	}
+
+	public static function getLatestPatchVersions(array $versions): array
+	{
+		$versions = self::sort($versions);
+		$result = [];
+		$lastVersionMajMin = null;
+		foreach ($versions as $version) {
+			$components = self::components($version);
+			if (count($components) < 2) {
+				throw new \InvalidArgumentException("Invalid version format: $version");
+			}
+			$majMin = implode('.', array_slice($components, 0, 2));
+			if ($majMin !== $lastVersionMajMin) {
+				$result[] = $version;
+				$lastVersionMajMin = $majMin;
+			}
+		}
+		return array_values($result);
 	}
 }
