@@ -14,7 +14,7 @@ class HttpClient
 	public array $headers = [];
 
 	public function __construct(
-		private readonly string $baseUrl,
+		private readonly string $baseUrl = '',
 	)
 	{
 		$ch = curl_init();
@@ -71,20 +71,10 @@ class HttpClient
 
 	public function get(string $path, bool $checkCode = true, mixed $out = null, array $headers = []): ?string
 	{
-		$cacheKey = "GET:$path";
-		$cacheValue = &$this->cache[$cacheKey];
-		if ($cacheValue ?? null) {
-			return $cacheValue;
-		}
+		[$code, $response] = $this->exec($path, $out, headers: $headers);
 
-		$response = $this->exec($path, $out, headers: $headers);
-		$code = curl_getinfo($this->ch, CURLINFO_HTTP_CODE);
-
-		if ($code === 200 || $code === 404) {
-			$cacheValue = $response;
-		}
 		if ($checkCode) {
-			$this->checkResponseCode('GET', $path);
+			$this->checkResponseCode('GET', $path, $code);
 		}
 
 		return is_string($response) ? $response : null;
@@ -92,12 +82,12 @@ class HttpClient
 
 	public function request(string $method, string $path, array $headers = []): string
 	{
-		return $this->exec($path, method: $method);
+		return $this->exec($path, method: $method)[1];
 	}
 
-	protected function checkResponseCode(string $method, string $path): void
+	protected function checkResponseCode(string $method, string $path, ?int $code = null): void
 	{
-		$code = curl_getinfo($this->ch, CURLINFO_HTTP_CODE);
+		$code ??= curl_getinfo($this->ch, CURLINFO_HTTP_CODE);
 		if ($code >= 200 && $code < 300) {
 			return;
 		}
@@ -107,8 +97,17 @@ class HttpClient
 		throw new RuntimeException('HTTP error: ' . $code, code: $code);
 	}
 
-	protected function exec(string $path, mixed $out = null, string $method = 'GET', array $headers = []): string|bool
+	protected function exec(string $path, mixed $out = null, string $method = 'GET', array $headers = []): array
 	{
+		if ($method === 'GET') {
+			$cacheKey = "$path:" . md5(json_encode($headers, JSON_THROW_ON_ERROR));
+
+			$cacheValue = &$this->cache[$cacheKey];
+			if ($cacheValue ?? null) {
+				return $cacheValue;
+			}
+		}
+
 		curl_setopt($this->ch, CURLOPT_CUSTOMREQUEST, $method);
 		curl_setopt($this->ch, CURLOPT_URL, $this->baseUrl . $path);
 		curl_setopt($this->ch, CURLOPT_HTTPHEADER, array_map(
@@ -126,11 +125,25 @@ class HttpClient
 			throw new InvalidArgumentException('Invalid output type: ' . gettype($out));
 		}
 
+		$responseHeaders = [];
+		curl_setopt($this->ch, CURLOPT_HEADERFUNCTION, static function ($_, string $data) use (&$responseHeaders): int {
+			$header = trim($data);
+			if (str_contains($header, ':')) {
+				[$name, $value] = explode(':', $header, 2);
+				$responseHeaders[strtolower($name)] = trim($value);
+			}
+			return strlen($data);
+		});
+
 		$response = curl_exec($this->ch);
 		if ($response === false) {
 			throw new RuntimeException('Curl error: ' . curl_error($this->ch));
 		}
 
-		return $response;
+		$code = curl_getinfo($this->ch, CURLINFO_HTTP_CODE);
+		if ($code >= 200 && $code < 500) {
+			$cacheValue = [$code, $response, $responseHeaders];
+		}
+		return [$code, $response, $responseHeaders];
 	}
 }

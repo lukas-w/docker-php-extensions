@@ -8,6 +8,7 @@ use DateTimeImmutable;
 class DockerRegistryHttpClient extends HttpClient
 {
 	private array $tokens = [];
+	private HttpClient $tokenClient;
 
 	public function __construct(
 		string                   $baseUrl,
@@ -15,9 +16,10 @@ class DockerRegistryHttpClient extends HttpClient
 	)
 	{
 		parent::__construct($baseUrl);
+		$this->tokenClient = new HttpClient();
 	}
 
-	protected function exec(string $path, mixed $out = null, string $method = 'GET', array $headers = []): string|bool
+	protected function exec(string $path, mixed $out = null, string $method = 'GET', array $headers = []): array
 	{
 		$token = $this->getTokenFromCache($path);
 
@@ -25,22 +27,13 @@ class DockerRegistryHttpClient extends HttpClient
 			$this->headers["Authorization"] = "Bearer " . $token;
 		}
 
-		$wwwAuth = null;
-		curl_setopt($this->ch, CURLOPT_HEADERFUNCTION, function ($_, string $header) use (&$wwwAuth): int {
-			$wwwAuthH = 'www-authenticate:';
-			if (str_starts_with(strtolower($header), $wwwAuthH)) {
-				$wwwAuth = trim(substr($header, strlen($wwwAuthH)));
-			}
-			return strlen($header);
-		});
-
-		$response = parent::exec($path, $out, $method, $headers);
-		$code = curl_getinfo($this->ch, CURLINFO_HTTP_CODE);
+		[$code, $response, $responseHeaders] = parent::exec($path, $out, $method, $headers);
 
 		if ($code === 401) {
 			if ($token) {
 				throw new \RuntimeException("401 Unauthorized with token for $path");
 			}
+			$wwwAuth = $responseHeaders['www-authenticate'] ?? null;
 			if (!$wwwAuth) {
 				throw new \RuntimeException("401 but no WWW-Authenticate header returned");
 			}
@@ -49,7 +42,7 @@ class DockerRegistryHttpClient extends HttpClient
 			return $this->exec($path, $out);
 		}
 
-		return $response;
+		return [$code, $response];
 	}
 
 	/**
@@ -80,17 +73,17 @@ class DockerRegistryHttpClient extends HttpClient
 				throw new \RuntimeException("Missing required parameter '$required' in WWW-Authenticate header");
 			}
 		}
-		$client = new HttpClient($params['realm']);
-		unset($params['realm']);
 
 		if ($this->tokenAuth) {
-			$client->setHeaders([
+			$this->tokenClient->setHeaders([
 				"Authorization: Basic " . base64_encode($this->tokenAuth),
 			]);
 		}
 
+		$realm = $params['realm'];
+		unset($params['realm']);
 		try {
-			$r = $client->getJson('?' . http_build_query($params));
+			$r = $this->tokenClient->getJson($realm . '?' . http_build_query($params));
 		} catch (\Throwable $e) {
 			throw new \RuntimeException("Failed to request token for $path", previous: $e);
 		}
