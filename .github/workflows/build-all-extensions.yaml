@@ -1,11 +1,8 @@
-#on:
-#  push:
 on:
   workflow_dispatch:
 env:
   IMAGE_DOMAIN: ghcr.io
   IMAGE_NAMESPACE: ${{ github.repository_owner }}
-  IMAGE_SOURCE: ${{ github.repositoryUrl }}
 jobs:
   list-extensions:
     runs-on: ubuntu-24.04
@@ -23,14 +20,15 @@ jobs:
           
           {
             echo 'result<<EOF'
-            php builder/main.php list-extensions
+            php src/builder/main.php list-extensions
             echo -e "\nEOF"
           } >> "$GITHUB_OUTPUT"
 
-  build:
+  build-images:
+    needs: [list-extensions]
     strategy:
       matrix:
         ext: ${{ fromJson(needs.list-extensions.outputs.extensions) }}
     uses: ./.github/workflows/build-extension-images.yaml
     with:
-      ext_name: ${{ matrix.ext.name }}
+      ext_name: ${{ matrix.ext }}

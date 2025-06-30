@@ -17,6 +17,20 @@ on:
         description: Comma-separated list of Docker platforms to build for
         default: linux/amd64,linux/arm64
         type: string
+  workflow_call:
+    inputs:
+      ext_name:
+        required: true
+        type: string
+      php_versions:
+        default: 8.1,8.2
+        type: string
+      os_targets:
+        default: alpine3.21,alpine3.22
+        type: string
+      platforms:
+        default: linux/amd64,linux/arm64
+        type: string
 env:
   IMAGE_DOMAIN: ghcr.io
   IMAGE_NAMESPACE: ${{ github.repository_owner }}
