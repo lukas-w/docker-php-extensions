@@ -20,7 +20,7 @@ class JobMatrix
 	public function toJson(): string
 	{
 		return json_encode([
-			...$this->vars,
+			...array_map(fn($values) => array_values($values), $this->vars),
 			'exclude' => $this->exclude,
 		], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
 	}
