@@ -16,15 +16,15 @@ class PeclPhpDep
 
 	public function satisfiedBy(string $phpVersion): bool
 	{
-		$min = $deps['min'] ?? null;
-		$max = $deps['max'] ?? null;
+		$min = $this->min ?? null;
+		$max = $this->max ?? null;
 		if ($min && version_compare($phpVersion, $min, '<')) {
 			return false;
 		}
 		if ($max && version_compare($phpVersion, $max, '>')) {
 			return false;
 		}
-		foreach ($deps['exclude'] ?? [] as $excl) {
+		foreach ($this->exclude ?? [] as $excl) {
 			if (version_compare($phpVersion, $excl, '==')) {
 				return false;
 			}
@@ -35,14 +35,14 @@ class PeclPhpDep
 	public static function fromXml(SimpleXMLElement $elm): self
 	{
 		$depElm = $elm->dependencies->required->php;
+		if (!$depElm) {
+			throw new \RuntimeException("No PHP dependencies found in XML.");
+		}
 		return new self(
 			min: (string)$depElm->min,
 			max: (string)$depElm->max,
 			exclude: array_values(array_filter(
-				array_map(
-					fn($e) => $e->getName() === 'exclude' ? (string)$e : null,
-					iterator_to_array($depElm->getChildren(), preserve_keys: false),
-				)
+				iterator_to_array($depElm->exclude, preserve_keys: false),
 			)),
 		);
 	}

@@ -91,6 +91,26 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 		}
 	}
 
+	foreach ($extVersions as $extVersion) {
+		$deps = $pecl->phpDependencies($extension, $extVersion);
+		foreach ($phpVersions as $php) {
+			if (!$deps->satisfiedBy($php)) {
+				$m = $m->exclude([
+					'ext_version' => $extVersion,
+					'php' => $php,
+				]);
+			}
+		}
+	}
+
+	function osToString(array $conf): array
+	{
+		if (array_key_exists('os', $conf)) {
+			return [...$conf, 'os' => Target::osRef(...$conf['os'])];
+		}
+		return $conf;
+	}
+
 	$m = excludeBuiltConfigs($extension, $m);
 	$m = new JobMatrix(
 		[
@@ -98,7 +118,10 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 			'os' => array_map(fn($os) => Target::osRef(...$os), $m->vars['os']),
 		],
 		array_map(
-			fn($conf) => [...$conf, 'os' => Target::osRef(...$conf['os'])],
+			fn($conf) => array_key_exists('os', $conf)
+				? [...$conf, 'os' => Target::osRef(...$conf['os'])]
+				: $conf
+			,
 			$m->exclude
 		)
 	);
