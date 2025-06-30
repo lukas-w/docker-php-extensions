@@ -99,6 +99,7 @@ class HttpClient
 
 	protected function exec(string $path, mixed $out = null, string $method = 'GET', array $headers = []): array
 	{
+		$headers = [...$this->headers, ...$headers];
 		if ($method === 'GET') {
 			$cacheKey = "$path:" . md5(json_encode($headers, JSON_THROW_ON_ERROR));
 
@@ -112,8 +113,8 @@ class HttpClient
 		curl_setopt($this->ch, CURLOPT_URL, $this->baseUrl . $path);
 		curl_setopt($this->ch, CURLOPT_HTTPHEADER, array_map(
 			static fn($k, $v) => "$k: $v",
-			array_keys($this->headers),
-			[...$this->headers, ...$headers],
+			array_keys($headers),
+			$headers,
 		));
 
 		if (is_resource($out)) {
