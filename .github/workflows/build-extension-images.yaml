@@ -59,6 +59,7 @@ jobs:
     needs: [matrix]
     strategy:
       matrix: ${{ fromJson(needs.matrix.outputs.matrix) }}
+      fail-fast: false
     uses: ./.github/workflows/build-extension-image.yaml
     with:
       ext_name: ${{ inputs.ext_name }}
