@@ -1,5 +1,6 @@
 <?php
 
+use dpe\builder\FailList;
 use dpe\builder\JobMatrix;
 use dpe\builder\IpeData;
 use dpe\builder\IterTools;
@@ -69,6 +70,45 @@ function printConfigs(string $extension, array $phpVersions, array $osTargets, a
 	}
 }
 
+function applyFailList(string $extension, JobMatrix $matrix): JobMatrix
+{
+	$fl = file_get_contents(__DIR__ . '/../../data/fail-list.json');
+	$fl = json_decode($fl, true);
+	if (!is_array($fl)) {
+		throw new RuntimeException("Unexpected fail-list.yaml contents");
+	}
+	$fl = $fl[$extension] ?? [];
+
+	$ext_versions = $matrix->vars['ext_version'] ?? [];
+
+	$fl_v_expanded = [];
+	foreach ($fl as $f) {
+		$v = $f['ext_version'] ?? null;
+		if (is_array($v)) {
+			[$op, $cmpV] = $v;
+			$op = match($op) {
+				'<' => -1,
+				'>' => 1,
+				default => throw new RuntimeException("Unknown operator: $op"),
+			};
+			foreach ($ext_versions as $ext_version) {
+				if (VersionTools::compare($ext_version, $cmpV) === $op) {
+					$fl_v_expanded[] = [
+						...$f,
+						'ext_version' => $ext_version,
+					];
+				}
+			}
+		}
+	}
+	$fl = [...$fl, ...$fl_v_expanded];
+
+	foreach ($fl as $f) {
+		$matrix = $matrix->exclude($f);
+	}
+	return $matrix;
+}
+
 function matrix(string $extension, array $phpVersions, array $osTargets, array $platforms): void
 {
 	global $pecl, $ipeData;
@@ -76,7 +116,6 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 	$bundled = false;
 	try {
 		$extVersions = $pecl->getStableVersions($extension);
-		$extVersions = VersionTools::getLatestPatchVersions($extVersions);
 	} catch (RuntimeException $e) {
 		if ($e->getCode() === 404 && $ipeData->isExtensionSupported($extension)) {
 			// Bundled extension not in PECL
@@ -95,6 +134,12 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 		'os' => $osTargets,
 //		'platform' => $platforms,
 	], []);
+
+	$m = $m->withVars(['ext_version' => VersionTools::getLatestPatchVersions($m->vars['ext_version'])]);
+	$m = FailList::fromFile(
+		__DIR__ . '/../../data/fail-list.tsv',
+		$extension,
+	)->filterMatrix($m);
 
 	foreach ($ipeData->getSpecialRequirements($extension) as $req) {
 		foreach ($m->configs() as $c) {

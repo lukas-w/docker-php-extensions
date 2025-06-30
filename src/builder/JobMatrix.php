@@ -45,6 +45,14 @@ class JobMatrix
 		return false;
 	}
 
+	public function withVars(array $vars): self
+	{
+		return new JobMatrix(
+			vars: [...$this->vars, ...$vars],
+			exclude: $this->exclude,
+		);
+	}
+
 	private static function matches(array $partialConfig, array $config): bool
 	{
 		foreach ($partialConfig as $key => $value) {

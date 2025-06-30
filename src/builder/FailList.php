@@ -1,0 +1,78 @@
+<?php
+
+namespace dpe\builder;
+
+class FailList
+{
+	public function __construct(
+		private readonly array $entries
+	)
+	{
+	}
+
+	public function filterMatrix(JobMatrix $m): JobMatrix
+	{
+		foreach ($this->entries as $entry) {
+			$m = $this->applyFilterEntry($entry, $m);
+		}
+		return $m;
+	}
+
+	private function applyFilterEntry(array $entry, JobMatrix $m): JobMatrix
+	{
+		$filters = [];
+		foreach ($entry as $var => $values) {
+			if ($var === 'ext') {
+				continue;
+			}
+			$values = explode(',', $values);
+			$varFilters = [];
+			foreach ($values as $value) {
+				if ($var === 'ext_version') {
+					if (preg_match('/^[<>=~]/', $value)) {
+						$op = $value[0];
+						$value = substr($value, 1);
+					} else {
+						$op = '~';
+					}
+					$varFilters[] = fn($v) => VersionTools::compare($v, $value, $op);
+				} else {
+					$varFilters[] = fn($v) => $v === $value;
+				}
+			}
+			$filters[] = fn($conf) => array_reduce(
+				$varFilters,
+				fn($carry, $filter) => $carry || $filter($conf[$var]),
+				false
+			);
+		}
+
+		foreach ($m->configs() as $config) {
+			$matches = array_reduce($filters, fn($carry, $filter) => $carry && $filter($config), true);
+			if ($matches) {
+				$m = $m->exclude($config);
+			}
+		}
+
+		return $m;
+	}
+
+	public static function fromFile(string $filename, ?string $extFilter = null): self
+	{
+		if (!file_exists($filename)) {
+			throw new \RuntimeException("File not found: $filename");
+		}
+
+		$file = fopen($filename, 'rb');
+		$entries = [];
+		$header = fgetcsv($file, separator: "\t");
+		while ($line = fgetcsv($file, separator: "\t")) {
+			$entry = array_combine($header, $line);
+			if ($extFilter && $entry['ext'] !== $extFilter) {
+				continue;
+			}
+			$entries[] = $entry;
+		}
+		return new self($entries);
+	}
+}

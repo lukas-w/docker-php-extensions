@@ -18,6 +18,14 @@ class VersionToolsTest extends TestCase
 	{
 		$this->assertEquals(0, VersionTools::compare('1.2.3', '1.2.3'));
 		$this->assertEquals(0, VersionTools::compare('1.2', '1.2.0'));
+		$this->assertEquals(1, VersionTools::compare('1.2.1', '1.2'));
+		$this->assertEquals(-1, VersionTools::compare('1.1.0', '2.0.0'));
+		$this->assertEquals(-1, VersionTools::compare('1.0.1', '1.2.0'));
+		$this->assertEquals(1, VersionTools::compare('1.2.0', '1.0.1'));
+		$this->assertTrue(VersionTools::compare('1.2.1', '1.2', '~='));
+		$this->assertTrue(VersionTools::compare('1.2.1', '1.2', '>'));
+		$this->assertFalse(VersionTools::compare('1.2.1', '1.2', '<'));
+		$this->assertTrue(VersionTools::compare('1.1.9', '1.2', '<'));
 	}
 
 	public function testGetVersionTags(): void

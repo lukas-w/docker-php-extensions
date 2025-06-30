@@ -22,40 +22,42 @@ class VersionTools
 		return explode('.', self::normalize($version));
 	}
 
-	public static function compare(string $a, string $b): int
+	public static function compare(string $a, string $b, ?string $op = null): int|bool
 	{
-		// Normalize version strings by replacing underscores, dashes, and pluses with dots
 		$a = explode('.', self::normalize($a));
 		$b = explode('.', self::normalize($b));
 
 		$l = max(count($a), count($b));
-		$a = array_pad($a, $l, '0'); // Pad with zeros to equal length
-		$b = array_pad($b, $l, '0'); // Pad with zeros to equal length
+		for ($i = 0; $i < $l; $i++) {
+			$ac = $a[$i] ?? null;
+			$bc = $b[$i] ?? null;
 
-		$lt = version_compare(
-			implode('.', $a),
-			implode('.', $b),
-			'<'
-		);
-		if ($lt) {
-			return -1;
+			if ($op === '~=' || $op === "~") {
+				if ($ac === null || $bc === null) {
+					return true;
+				}
+			} else {
+				$ac ??= '0';
+				$bc ??= '0';
+			}
+
+			if (version_compare($ac, $bc, '<')) {
+				return $op ? $op === '<' : -1;
+			}
+			if (version_compare($ac, $bc, '>')) {
+				return $op ? $op === '>' : 1;
+			}
 		}
 
-		if (version_compare(
-			implode('.', $a),
-			implode('.', $b),
-			'>'
-		)) {
-			return 1;
-		}
-		return 0;
+		return $op === '='  || $op === '==' || $op === '~=' || $op === '~';
 	}
 
 	public static function sort(array $versions, bool $newestFirst = true): array
 	{
-		usort($versions, static fn($a, $b) => self::compare($a, $b));
 		if ($newestFirst) {
-			$versions = array_reverse($versions);
+			usort($versions, static fn($a, $b) => self::compare($b, $a));
+		} else {
+			usort($versions, static fn($a, $b) => self::compare($a, $b));
 		}
 		return $versions;
 	}
@@ -65,7 +67,7 @@ class VersionTools
 	/// E.g. [1.0.0, 1.0.1] will return [1.0.0 => ['1.0.0'], 1.0.1 => ['1.0.1', '1.0', '1']]
 	public static function getVersionTags(array $versions, array $levels = [2, 1]): array
 	{
-		self::sort($versions);
+		$versions = self::sort($versions);
 
 		$tags = array_map(fn($v) => [$v], $versions);
 
