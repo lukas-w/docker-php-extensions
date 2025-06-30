@@ -250,11 +250,20 @@ function dockerBuild(string $extRef, array $phpVersions, array $oss, array $plat
 	$conf = dockerConfig($extRef, $phpVersions, $oss, $platforms);
 }
 
-function listExtensions(?string $phpVersion): void
+function listExtensions(?array $phpVersions): void
 {
 	global $ipeData;
-	$extensions = $ipeData->getSupportedExtensions($phpVersion);
-	echo json_encode($extensions, JSON_PRETTY_PRINT);
+	$exts = [];
+	if ($phpVersions) {
+		foreach ($phpVersions as $v) {
+			$exts = [...$exts, ...$ipeData->getSupportedExtensions($v)];
+		}
+	} else {
+		$exts = $ipeData->getSupportedExtensions();
+	}
+	$exts = array_unique($exts);
+	sort($exts);
+	echo json_encode($exts, JSON_PRETTY_PRINT);
 	echo "\n";
 }
 
@@ -266,10 +275,7 @@ function main(): int
 
 	if ($cmd === 'list-extensions') {
 		$phpVersions = explode(",", array_shift($argv));
-		if ($phpVersions && count($phpVersions) > 1) {
-			throw new InvalidArgumentException("Only one PHP version is supported");
-		}
-		listExtensions($phpVersions ? $phpVersions[0] : null);
+		listExtensions($phpVersions ?: null);
 		return 0;
 	}
 

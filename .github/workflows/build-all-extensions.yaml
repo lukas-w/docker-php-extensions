@@ -1,5 +1,18 @@
 on:
   workflow_dispatch:
+    inputs:
+      php_versions:
+        description: Comma-separated list of PHP versions to build for
+        default: 8.1,8.2
+        type: string
+      os_targets:
+        description: Comma-separated list of OS targets to build for
+        default: alpine3.21,alpine3.22
+        type: string
+      platforms:
+        description: Comma-separated list of Docker platforms to build for
+        default: linux/amd64,linux/arm64
+        type: string
 env:
   IMAGE_DOMAIN: ghcr.io
   IMAGE_NAMESPACE: ${{ github.repository_owner }}
@@ -20,7 +33,7 @@ jobs:
           
           {
             echo 'result<<EOF'
-            php src/builder/main.php list-extensions
+            php src/builder/main.php list-extensions ${{ inputs.php_versions }}
             echo -e "\nEOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -32,3 +45,6 @@ jobs:
     uses: ./.github/workflows/build-extension-images.yaml
     with:
       ext_name: ${{ matrix.ext }}
+      php_versions: ${{ inputs.php_versions }}
+      os_targets: ${{ inputs.os_targets }}
+      platforms: ${{ inputs.platforms }}

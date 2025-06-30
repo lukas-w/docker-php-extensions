@@ -23,13 +23,11 @@ on:
         required: true
         type: string
       php_versions:
-        default: 8.1,8.2
+        required: true
         type: string
       os_targets:
-        default: alpine3.21,alpine3.22
         type: string
       platforms:
-        default: linux/amd64,linux/arm64
         type: string
 env:
   IMAGE_DOMAIN: ghcr.io

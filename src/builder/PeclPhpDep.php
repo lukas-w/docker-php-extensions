@@ -12,6 +12,11 @@ class PeclPhpDep
 		public readonly array  $exclude = [],
 	)
 	{
+		foreach ($this->exclude as $excl) {
+			if (!is_string($excl)) {
+				throw new \InvalidArgumentException("exclude must be a string array");
+			}
+		}
 	}
 
 	public function satisfiedBy(string $phpVersion): bool

@@ -102,7 +102,7 @@ class JobMatrix
 		// Remaining values in $knockout are those that are never seen
 		$vars = [];
 		foreach ($this->vars as $key => $values) {
-			$vars[$key] = array_values(array_diff($values, $knockout[$key]));
+			$vars[$key] = array_values(array_udiff($values, $knockout[$key], static fn($a, $b) => $a <=> $b));
 		}
 
 		return new JobMatrix(

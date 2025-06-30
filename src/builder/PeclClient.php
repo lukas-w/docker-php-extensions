@@ -53,7 +53,8 @@ class PeclClient
 	{
 		$xml = $this->requestXml(
 			"rest/r/$package/package.$version.xml",
-			"http://pear.php.net/dtd/package-2.0"
+			""
+//			"http://pear.php.net/dtd/package-2.0"
 		);
 		return PeclPhpDep::fromXml($xml);
 	}
