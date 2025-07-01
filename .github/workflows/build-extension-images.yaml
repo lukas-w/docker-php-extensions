@@ -17,6 +17,10 @@ on:
         description: Comma-separated list of Docker platforms to build for
         default: linux/amd64,linux/arm64
         type: string
+      ignore_existing_images:
+        type: boolean
+        default: false
+        description: Whether to ignore existing images in the registry and rebuild them
   workflow_call:
     inputs:
       ext_name:
@@ -29,6 +33,9 @@ on:
         type: string
       platforms:
         type: string
+      ignore_existing_images:
+        type: boolean
+        default: false
 env:
   IMAGE_DOMAIN: ghcr.io
   IMAGE_NAMESPACE: ${{ github.repository_owner }}
@@ -48,6 +55,8 @@ jobs:
 
       - name: Get matrix
         id: get-matrix
+        env:
+          DPE_IGNORE_EXISTING_IMAGES: ${{ inputs.ignore_existing_images }}
         run: |
           {
             echo 'result<<EOF'

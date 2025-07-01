@@ -1,9 +1,9 @@
 <?php
 
 use dpe\builder\FailList;
-use dpe\builder\JobMatrix;
 use dpe\builder\IpeData;
 use dpe\builder\IterTools;
+use dpe\builder\JobMatrix;
 use dpe\builder\PeclClient;
 use dpe\builder\VersionTools;
 use dpe\common\Config;
@@ -171,7 +171,9 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 		return $conf;
 	}
 
-	$m = excludeBuiltConfigs($extension, $m);
+	if (!(getenv('DPE_IGNORE_EXISTING_IMAGES') ?? false)) {
+		$m = excludeBuiltConfigs($extension, $m);
+	}
 	$m = new JobMatrix(
 		[
 			...$m->vars,
