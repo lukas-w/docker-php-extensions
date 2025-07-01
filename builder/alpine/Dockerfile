@@ -13,6 +13,7 @@ RUN --mount=type=cache,id=apk_${OS_REF}_${TARGETPLATFORM},target=/var/cache/apk 
     && apk add --no-cache ccache
 
 COPY --from=ipe install-php-extensions /usr/local/bin/install-php-extensions
+RUN chmod +x /usr/local/bin/install-php-extensions
 
 RUN cat /etc/apk/world > apk-before
 
@@ -22,7 +23,11 @@ ENV IPE_KEEP_SYSPKG_CACHE=1 \
     IPE_LZF_BETTERCOMPRESSION=1
 RUN --mount=type=cache,id=apk_${TARGETPLATFORM},target=/var/cache/apk \
     --mount=type=cache,id=ccache_${TARGETPLATFORM}_${PHP_VERSION}_${EXT_NAME},target=${CCACHE_DIR} \
-    install-php-extensions ${EXT_NAME}-${EXT_VERSION}
+    if [ ${EXT_VERSION} == "bundled" ]; then \
+      install-php-extensions ${EXT_NAME}; \
+    else \
+      install-php-extensions ${EXT_NAME}-${EXT_VERSION}; \
+    fi
 
 RUN cat /etc/apk/world > apk-after
 # Find new packages

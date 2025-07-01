@@ -135,7 +135,9 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 //		'platform' => $platforms,
 	], []);
 
-	$m = $m->withVars(['ext_version' => VersionTools::getLatestPatchVersions($m->vars['ext_version'])]);
+	if (! $bundled) {
+		$m = $m->withVars(['ext_version' => VersionTools::getLatestPatchVersions($m->vars['ext_version'])]);
+	}
 	$m = FailList::fromFile(
 		__DIR__ . '/../../data/fail-list.tsv',
 		$extension,
