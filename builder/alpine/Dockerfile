@@ -35,4 +35,4 @@ FROM scratch
 ARG EXT_NAME
 
 COPY --link --from=builder out /
-COPY --link php-ext-install-deps /usr/local/bin/
+#COPY --link php-ext-install-deps /usr/local/bin/

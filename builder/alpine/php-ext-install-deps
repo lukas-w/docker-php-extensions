@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-apk add --no-cache "$(cat /usr/local/share/php-exts/*.pkgs)"
+apk add --no-cache $(cat /usr/local/share/php-exts/*.pkgs)
