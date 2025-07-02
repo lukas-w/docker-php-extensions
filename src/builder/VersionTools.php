@@ -42,14 +42,17 @@ class VersionTools
 			}
 
 			if (version_compare($ac, $bc, '<')) {
-				return $op ? $op === '<' : -1;
+				return $op ? ($op === '<' || $op === '<=') : -1;
 			}
 			if (version_compare($ac, $bc, '>')) {
-				return $op ? $op === '>' : 1;
+				return $op ? ($op === '>' || $op === '>=') : 1;
 			}
 		}
 
-		return $op === '='  || $op === '==' || $op === '~=' || $op === '~';
+		return match ($op) {
+			'=', '==', '>=', '<=', '~', '~=' => true,
+			default => false,
+		};
 	}
 
 	public static function sort(array $versions, bool $newestFirst = true): array

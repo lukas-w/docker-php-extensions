@@ -22,16 +22,16 @@ class FailList
 	{
 		$filters = [];
 		foreach ($entry as $var => $values) {
-			if ($var === 'ext') {
+			if ($var === 'ext' || !$values) {
 				continue;
 			}
 			$values = explode(',', $values);
 			$varFilters = [];
 			foreach ($values as $value) {
-				if ($var === 'ext_version') {
-					if (preg_match('/^[<>=~]/', $value)) {
-						$op = $value[0];
-						$value = substr($value, 1);
+				if ($var === 'ext_version' || $var === 'php') {
+					if (preg_match('/^(<=?|>=?|=|~)/', $value, $op)) {
+						$op = $op[0];
+						$value = substr($value, strlen($op));
 					} else {
 						$op = '~';
 					}
@@ -67,7 +67,10 @@ class FailList
 		$entries = [];
 		$header = fgetcsv($file, separator: "\t");
 		while ($line = fgetcsv($file, separator: "\t")) {
-			$entry = array_combine($header, $line);
+			if (str_starts_with($line[0], '#')) {
+				continue; // Skip comment lines
+			}
+			$entry = array_combine($header, array_pad($line, count($header), ''));
 			if ($extFilter && $entry['ext'] !== $extFilter) {
 				continue;
 			}
