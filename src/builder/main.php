@@ -213,7 +213,7 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 	}
 
 	if (!$bundled) {
-		foreach ($extVersions as $extVersion) {
+		foreach ($m->vars['ext_version'] as $extVersion) {
 			$deps = $pecl->phpDependencies($extension, $extVersion);
 			foreach ($phpVersions as $php) {
 				if (!$deps->satisfiedBy($php)) {
