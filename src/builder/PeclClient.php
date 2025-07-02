@@ -3,6 +3,7 @@
 namespace dpe\builder;
 
 use dpe\common\HttpClient;
+use RuntimeException;
 use SimpleXMLElement;
 
 class PeclClient
@@ -51,11 +52,18 @@ class PeclClient
 
 	public function phpDependencies(string $package, string $version): PeclPhpDep
 	{
-		$xml = $this->requestXml(
-			"rest/r/$package/package.$version.xml",
-			""
-//			"http://pear.php.net/dtd/package-2.0"
-		);
+		try {
+			$xml = $this->requestXml(
+				"rest/r/$package/package.$version.xml",
+				""
+	//			"http://pear.php.net/dtd/package-2.0"
+			);
+		} catch (RuntimeException $e) {
+			throw new RuntimeException(
+				"Failed to fetch PHP dependencies for package $package version $version",
+				previous: $e
+			);
+		}
 		return PeclPhpDep::fromXml($xml);
 	}
 

@@ -8,6 +8,7 @@ ds	<1.4.0
 ev	<1.1
 event	<3.0
 excimer	<1.1
+excimer	1.2.0 # 1.2.0 is missing in PECL API (404 error)
 gnupg	<1.5
 grpc	<1.58,1.62,1.63,1.64
 igbinary	<3.1
