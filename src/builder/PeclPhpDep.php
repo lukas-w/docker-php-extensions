@@ -41,7 +41,8 @@ class PeclPhpDep
 	{
 		$depElm = $elm->dependencies->required->php;
 		if (!$depElm) {
-			throw new \RuntimeException("No PHP dependencies found in XML.");
+			error_log("No PHP dependencies found in XML.");
+			return new self('', '', exclude: []);
 		}
 		return new self(
 			min: (string)$depElm->min,

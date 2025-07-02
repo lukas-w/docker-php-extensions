@@ -6,7 +6,7 @@ class JobMatrix
 {
 	public function __construct(
 		public readonly array $vars,
-		public readonly array $exclude,
+		public readonly array $exclude = [],
 	)
 	{
 		if (array_key_exists('exclude', $this->vars)) {

@@ -97,6 +97,10 @@ class VersionTools
 
 	public static function getLatestPatchVersions(array $versions): array
 	{
+		$bundledIdx = array_search('bundled', $versions, true);
+		if ($bundledIdx !== false) {
+			unset($versions[$bundledIdx]);
+		}
 		$versions = self::sort($versions);
 		$result = [];
 		$lastVersionMajMin = null;
@@ -110,6 +114,9 @@ class VersionTools
 				$result[] = $version;
 				$lastVersionMajMin = $majMin;
 			}
+		}
+		if ($bundledIdx !== false) {
+			$result[] = 'bundled';
 		}
 		return array_values($result);
 	}

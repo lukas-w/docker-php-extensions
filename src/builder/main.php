@@ -109,39 +109,100 @@ function applyFailList(string $extension, JobMatrix $matrix): JobMatrix
 	return $matrix;
 }
 
+function getBundledExtensions(Target $target): array
+{
+	$targetStr = $target->toString();
+	$filename = __DIR__ . "/../../data/$targetStr/bundled-extensions";
+	if (!file_exists($filename)) {
+		throw new RuntimeException("Missing bundled extensions data. Run make data/bundled-extensions-" . $targetStr);
+	}
+	$data = file_get_contents($filename);
+	if ($data === false) {
+		throw new RuntimeException("Failed to read bundled extensions data from $filename");
+	}
+	return explode(" ", trim($data));
+}
+
+function isExtensionBundled(string $extension, Target $target): bool
+{
+	return in_array($extension, getBundledExtensions($target), true);
+}
+
+function targetFromConf(array $conf): Target
+{
+	return new Target(
+		phpVersion: $conf['php'],
+		osId: $conf['os'][0],
+		osVersion: $conf['os'][1],
+	);
+}
+
 function matrix(string $extension, array $phpVersions, array $osTargets, array $platforms): void
 {
 	global $pecl, $ipeData;
 
-	$bundled = false;
-	try {
-		$extVersions = $pecl->getStableVersions($extension);
-	} catch (RuntimeException $e) {
-		if ($e->getCode() === 404 && $ipeData->isExtensionSupported($extension)) {
-			// Bundled extension not in PECL
-			$bundled = true;
-			$extVersions = ['bundled'];
-		} else {
-			throw $e;
-		}
-	}
-
 	$phpVersions = array_filter($phpVersions, fn($v) => $ipeData->isPhpVersionSupported($extension, $v));
 
 	$m = new JobMatrix([
-		'ext_version' => $extVersions,
+		'ext_version' => ['bundled'],
 		'php' => $phpVersions,
 		'os' => $osTargets,
-//		'platform' => $platforms,
-	], []);
-
-	if (! $bundled) {
-		$m = $m->withVars(['ext_version' => VersionTools::getLatestPatchVersions($m->vars['ext_version'])]);
+	]);
+	$bundledTargets = [];
+	$allBundled = true;
+	$someBundled = false;
+	foreach ($m->configs() as $conf) {
+		$target = targetFromConf($conf);
+		$bundled = isExtensionBundled($extension, $target);
+		if ($bundled) {
+			$someBundled = true;
+		} else {
+			$allBundled = false;
+		}
+		$bundledTargets[$target->toString()] = $bundled;
 	}
+
+	if (!$allBundled) {
+		try {
+			$extVersions = $pecl->getStableVersions($extension);
+			$m = $m->withVars(['ext_version' => [...$m->vars['ext_version'], ...$extVersions]]);
+		} catch (RuntimeException $e) {
+			if ($e->getCode() === 404) {
+				if (!$ipeData->isExtensionSupported($extension)) {
+					throw new RuntimeException("Unknown or unsupported extension $extension", $e);
+				}
+
+				if (!$someBundled) {
+					error_log("Warning: Extension $extension is not in PECL and not bundled.");
+				}
+			} else {
+				throw $e;
+			}
+		}
+		foreach ($bundledTargets as $targetStr => $bundled) {
+			if ($bundled) {
+				$target = Target::fromString($targetStr);
+				foreach ($extVersions as $extVersion) {
+					$m = $m->exclude([
+						'ext_version' => $extVersion,
+						'php' => $target->phpVersion,
+						'os' => [$target->osId, $target->osVersion],
+					]);
+				}
+			}
+		}
+	}
+
+	if (!$someBundled) {
+		$m = $m->exclude(['ext_version' => 'bundled']);
+	}
+
 	$m = FailList::fromFile(
 		__DIR__ . '/../../data/fail-list.tsv',
 		$extension,
 	)->filterMatrix($m);
+
+	$m = $m->withVars(['ext_version' => VersionTools::getLatestPatchVersions($m->vars['ext_version'])]);
 
 	foreach ($ipeData->getSpecialRequirements($extension) as $req) {
 		foreach ($m->configs() as $c) {
