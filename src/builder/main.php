@@ -373,6 +373,15 @@ function listExtensions(?array $phpVersions): void
 		$exts = $ipeData->getSupportedExtensions();
 	}
 	$exts = array_unique($exts);
+	$exts = array_filter($exts, static function ($e) use ($ipeData) {
+		foreach ($ipeData->getSpecialRequirements($e) as $r) {
+			if (! $r->negated && $r->zts) {
+				error_log("Skipping $e because it requires ZTS which is not supported");
+				return false;
+			}
+		}
+		return true;
+	});
 	sort($exts);
 	echo json_encode($exts, JSON_PRETTY_PRINT);
 	echo "\n";

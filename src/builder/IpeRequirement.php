@@ -13,10 +13,11 @@ class IpeRequirement
 		public readonly ?string $osId,
 		public readonly ?string $osVersion,
 		public readonly ?string $phpVersion,
+		public readonly ?bool   $zts = null,
 	)
 	{
-		if (!$osId && !$phpVersion) {
-			throw new InvalidArgumentException("At least one of osId or phpVersion must be set");
+		if (!$osId && !$phpVersion && !$zts) {
+			throw new InvalidArgumentException("At least one of osId, phpVersion or zts must be set");
 		}
 		if ($this->osVersion && !$osId) {
 			throw new InvalidArgumentException("osVersion requires osId");
@@ -33,7 +34,7 @@ class IpeRequirement
 			$tests[] = VersionTools::compare($osVersion, $this->osVersion) === 0;
 		}
 		if ($this->phpVersion) {
-			if (! $phpVersion) {
+			if (!$phpVersion) {
 				throw new InvalidArgumentException("no phpVersion provided");
 			}
 			$tests[] = VersionTools::compare($phpVersion, $this->phpVersion) === 0;
@@ -62,25 +63,31 @@ class IpeRequirement
 			$req = substr($req, 1);
 		}
 
-		if (str_contains($req, 'zts')) {
-			throw new InvalidArgumentException("ZTS is not implemented");
+		$osId = null;
+		$osVersion = null;
+		$phpVersion = null;
+		$zts = null;
+
+		foreach (explode('-', $req) as $r) {
+			if ($r === 'zts') {
+				$zts = true;
+			} else if (preg_match('/^\d+\.\d+$/', $r)) {
+				$phpVersion = $r;
+			} else {
+				try {
+					[$osId, $osVersion] = Target::parseOsRef($r);
+				} catch (InvalidArgumentException $e) {
+					throw new InvalidArgumentException("Can't parse: $req", previous: $e);
+				}
+			}
 		}
-
-		$r = explode('-', $req);
-		$osRef = array_pop($r);
-		$phpVersion = array_pop($r);
-
-		if (count($r)) {
-			throw new InvalidArgumentException("Can't parse: $req");
-		}
-
-		[$osId, $osVersion] = Target::parseOsRef($osRef);
 
 		return new self(
 			negated: $n,
 			osId: $osId,
 			osVersion: $osVersion,
 			phpVersion: $phpVersion,
+			zts: $zts,
 		);
 	}
 }
