@@ -139,7 +139,7 @@ function targetFromConf(array $conf): Target
 
 function matrix(string $extension, array $phpVersions, array $osTargets, array $platforms): void
 {
-	global $pecl, $ipeData;
+	global $pecl, $ipeData, $config;
 
 	$phpVersions = array_filter($phpVersions, fn($v) => $ipeData->isPhpVersionSupported($extension, $v));
 
@@ -243,7 +243,7 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 		return $conf;
 	}
 
-	if (!(getenv('DPE_IGNORE_EXISTING_IMAGES') ?? false)) {
+	if (! $config->ignoreExistingImages) {
 		$m = excludeBuiltConfigs($extension, $m);
 	}
 	$m = new JobMatrix(

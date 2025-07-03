@@ -12,6 +12,7 @@ class Config
 		public readonly string  $imageNameTemplate,
 		public readonly string  $imageTagTemplate,
 		public readonly string  $imageTagLatestTemplate,
+		public readonly bool    $ignoreExistingImages,
 		private readonly string $githubToken,
 	)
 	{
@@ -78,6 +79,7 @@ class Config
 			imageNameTemplate: self::env("IMAGE_NAME_TEMPLATE", "php-ext-%ext_name%"),
 			imageTagTemplate: self::env("IMAGE_TAG_TEMPLATE", "%ext_version%-%php_version%-%os%"),
 			imageTagLatestTemplate: self::env("IMAGE_TAG_LATEST_TEMPLATE", "%php_version%-%os%"),
+			ignoreExistingImages: filter_var(self::env("DPE_IGNORE_EXISTING_IMAGES", ""), FILTER_VALIDATE_BOOLEAN) ?? false,
 			githubToken: self::env("GITHUB_TOKEN", ""),
 		);
 	}
