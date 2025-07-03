@@ -98,7 +98,7 @@ class VersionTools
 		return $result;
 	}
 
-	public static function getLatestPatchVersions(array $versions): array
+	public static function getLatestVersionsWithLevel(array $versions, int $level = 2): array
 	{
 		$bundledIdx = array_search('bundled', $versions, true);
 		if ($bundledIdx !== false) {
@@ -106,16 +106,16 @@ class VersionTools
 		}
 		$versions = self::sort($versions);
 		$result = [];
-		$lastVersionMajMin = null;
+		$lastLevelVersion = null;
 		foreach ($versions as $version) {
 			$components = self::components($version);
-			if (count($components) < 2) {
+			if (count($components) < $level) {
 				throw new \InvalidArgumentException("Invalid version format: $version");
 			}
-			$majMin = implode('.', array_slice($components, 0, 2));
-			if ($majMin !== $lastVersionMajMin) {
+			$levelVersion = implode('.', array_slice($components, 0, $level));
+			if ($levelVersion !== $lastLevelVersion) {
 				$result[] = $version;
-				$lastVersionMajMin = $majMin;
+				$lastLevelVersion = $levelVersion;
 			}
 		}
 		if ($bundledIdx !== false) {

@@ -202,7 +202,16 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 		$extension,
 	)->filterMatrix($m);
 
-	$m = $m->withVars(['ext_version' => VersionTools::getLatestPatchVersions($m->vars['ext_version'])]);
+	/// FIXME: Hard-coded quirk, build a generic solution
+	$versionLevel = 2;
+	if ($extension === 'timezonedb') {
+		$versionLevel = 1;
+	}
+	$m = $m->withVars(['ext_version' =>
+		VersionTools::getLatestVersionsWithLevel(
+			$m->vars['ext_version'], $versionLevel
+		)
+	]);
 
 	foreach ($ipeData->getSpecialRequirements($extension) as $req) {
 		foreach ($m->configs() as $c) {
