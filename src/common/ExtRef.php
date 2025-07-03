@@ -7,7 +7,7 @@ use RuntimeException;
 class ExtRef
 {
 	private const VERSION_REGEX = '(?<version>bundled|[\d\.]+)';
-	private const CHANNELS = [
+	public const CHANNELS = [
 		'alpha',
 		'beta',
 		'stable',

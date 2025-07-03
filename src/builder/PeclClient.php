@@ -2,6 +2,7 @@
 
 namespace dpe\builder;
 
+use dpe\common\ExtRef;
 use dpe\common\HttpClient;
 use RuntimeException;
 use SimpleXMLElement;
@@ -44,6 +45,20 @@ class PeclClient
 					'v' => $r['version'] = (string)$f,
 					's' => $r['stability'] = (string)$f,
 				};
+			}
+
+			// Override stability for certain version suffixes
+			$suffix_mappings = [
+				'dev' => 'devel',
+			];
+			foreach (ExtRef::CHANNELS as $channel) {
+				$suffix_mappings[$channel] = $channel;
+			}
+			foreach ($suffix_mappings as $suffix => $channel) {
+				if (str_ends_with($r['version'], $suffix)) {
+					$r['stability'] = $channel;
+					break;
+				}
 			}
 			$releases[] = $r;
 		}
