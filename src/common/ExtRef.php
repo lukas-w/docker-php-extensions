@@ -76,7 +76,7 @@ class ExtRef
 			'devel'
 		];
 		$channel_pattern = "(?<channel>" . implode('|', $channels) . ")";
-		$version_pattern = "(?<compatible>\^)?(?<version>[\d\.]+)";
+		$version_pattern = "(?<compatible>\^)?(?<version>[^\-@]+)";
 
 		$variants = [
 			"/^$version_pattern@$channel_pattern$/", // Version with channel, e.g. ^2.8@stable

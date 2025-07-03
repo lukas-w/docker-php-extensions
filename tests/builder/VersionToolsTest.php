@@ -59,8 +59,14 @@ class VersionToolsTest extends TestCase
 	{
 		$this->assertEquals(
 			['1.2.3', '1.1.15'],
-			VersionTools::getLatestPatchVersions(
+			VersionTools::getLatestVersionsWithLevel(
 				['1.2.3', '1.2.2', '1.2.1', '1.1.15', '1.1.15-rc', '1.1.5']
+			)
+		);
+		$this->assertEquals(
+			['2.1.15', '1.2.3'],
+			VersionTools::getLatestVersionsWithLevel(
+				['1.2.3', '1.2.2', '1.2.1', '2.1.15', '2.1.15-rc', '2.1.5']
 			)
 		);
 	}
