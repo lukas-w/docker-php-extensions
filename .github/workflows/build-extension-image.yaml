@@ -116,3 +116,6 @@ jobs:
             org.opencontainers.image.source=${{ env.IMAGE_SOURCE }}
           cache-from: gha
           cache-to: type=gha,mode=max
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: "false"
+          DOCKER_BUILD_SUMMARY: "false"
