@@ -25,6 +25,7 @@ mongodb	<1.16
 msgpack	<2.1
 oauth	<2.0
 openswoole	<22.1
+openswoole	<25	>=8.4
 # Fails with "configure: error: cannot guess build type; you must specify one"
 pdo_firebird	>=0.0
 pdo_sqlsrv	<5.10
