@@ -34,6 +34,7 @@ pq	<2.2
 protobuf	<3.20
 psr	<1.2
 raphf	<2.0
+redis	<6.1	>=8.4
 # seasclick outputs a module with different name (SeasClick.so vs seasclick.so)
 # Handling this is currently out of scope
 seasclick	>=0.0
