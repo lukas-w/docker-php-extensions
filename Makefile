@@ -1,4 +1,4 @@
-IPE_VERSION ?= 2.7.31
+IPE_VERSION ?= 2.9.13
 IPE_REPO ?= https://github.com/mlocati/docker-php-extension-installer
 
 os_supported := alpine3.21 alpine3.22
