@@ -218,7 +218,7 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 	$num = array_reduce($m->vars, fn($carry, $item) => $carry * count($item), 1) - count($m->exclude);
 	error_log("Total: $num");
 
-	$m = $m->implode('platform', ',');
+//	$m = $m->implode('platform', ',');
 
 	echo $m->toJson();
 }
