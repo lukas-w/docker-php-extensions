@@ -1,4 +1,4 @@
-ext	ext_version	php
+ext	ext_version	php	platform
 amqp	<1.11
 apcu	<5.0
 ast	<1.0
@@ -44,8 +44,7 @@ oci8	3.2	<8.1,>8.1
 oci8	3.3	<8.2,>8.2
 openswoole	<22.1
 openswoole	<25	>=8.4
-# Fails with "configure: error: cannot guess build type; you must specify one"
-pdo_firebird	>=0.0
+pdo_firebird	bundled	""	linux/arm64
 # Fails with "pear/PDO_OCI requires PHP (version >= 5.0.3, version <= 6.0.0)"
 pdo_oci	<=1.0	>6.0
 pdo_sqlsrv	<5.10
