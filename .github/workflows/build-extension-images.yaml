@@ -75,5 +75,5 @@ jobs:
       ext_version: ${{ matrix.ext_version }}
       php: ${{ matrix.php }}
       os: ${{ matrix.os }}
-      platforms: ${{ inputs.platforms }}
+      platforms: ${{ matrix.platform }}
       push: true
