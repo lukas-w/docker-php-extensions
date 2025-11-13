@@ -7,10 +7,14 @@ class JobMatrix
 	public function __construct(
 		public readonly array $vars,
 		public readonly array $exclude = [],
+		public readonly array $include = [],
 	)
 	{
 		if (array_key_exists('exclude', $this->vars)) {
 			throw new \InvalidArgumentException("The 'exclude' key is reserved and cannot be used as job matrix variable.");
+		}
+		if (array_key_exists('include', $this->vars)) {
+			throw new \InvalidArgumentException("The 'include' key is reserved and cannot be used as job matrix variable.");
 		}
 	}
 
@@ -22,20 +26,39 @@ class JobMatrix
 		return json_encode([
 			...array_map(fn($values) => array_values($values), $this->vars),
 			'exclude' => $this->exclude,
+			'include' => $this->include,
 		], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
 	}
 
 	public function configs(): iterable
 	{
+		$includeHasMatch = array_fill(0, count($this->include), false);
+
 		foreach (IterTools::product(...$this->vars) as $c) {
 			if ($this->excludes($c)) {
 				continue;
 			}
+			$matchingIncludes = array_filter(
+				$this->include,
+				static fn($include) => self::includeMatches($include, $c)
+			);
+			foreach ($matchingIncludes as $i => $include) {
+				$c = [...$c, ...$include];
+				$includeHasMatch[$i] = true;
+			}
 			yield $c;
+		}
+
+		// Non-matching includes are added as additional configurations
+		foreach ($this->include as $i => $include) {
+			if ($includeHasMatch[$i]) {
+				continue;
+			}
+			yield $include;
 		}
 	}
 
-	public function excludes(array $config): bool
+	private function excludes(array $config): bool
 	{
 		foreach ($this->exclude as $exclude) {
 			if (self::matches($exclude, $config)) {
@@ -50,7 +73,19 @@ class JobMatrix
 		return new JobMatrix(
 			vars: [...$this->vars, ...$vars],
 			exclude: $this->exclude,
+			include: $this->include,
 		);
+	}
+
+	// Unlike `matches`, this ignores non-existing keys because they're meant to be added
+	private static function includeMatches(array $include, array $config): bool
+	{
+		foreach ($include as $key => $value) {
+			if (isset($config[$key]) && $config[$key] !== $value) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private static function matches(array $partialConfig, array $config): bool
@@ -77,14 +112,23 @@ class JobMatrix
 		))->cleanup();
 	}
 
-	public function exclude(array $conf): self
+	public function exclude(array $partialConf): self
 	{
-		foreach ($conf as $key => $value) {
+		foreach ($partialConf as $key => $value) {
 			if (!array_key_exists($key, $this->vars)) {
 				throw new \InvalidArgumentException("Exclude configuration key '$key' not in job matrix.");
 			}
 		}
-		return (new JobMatrix($this->vars, [...$this->exclude, $conf]))->cleanup();
+		$includes = array_filter(
+			$this->include,
+			static fn($include) => ! self::includeMatches($partialConf, $include)
+		);
+		return (new JobMatrix($this->vars, [...$this->exclude, $partialConf], $includes))->cleanup();
+	}
+
+	public function include(array $includeConf): self
+	{
+		return (new JobMatrix($this->vars, $this->exclude, [...$this->include, $includeConf]))->cleanup();
 	}
 
 	private function cleanup(): self
@@ -116,6 +160,7 @@ class JobMatrix
 		return new JobMatrix(
 			vars: $vars,
 			exclude: $this->exclude,
+			include: $this->include,
 		);
 	}
 
@@ -133,6 +178,7 @@ class JobMatrix
 		return new JobMatrix(
 			vars: $this->vars,
 			exclude: $excludes,
+			include: $this->include,
 		);
 	}
 }
