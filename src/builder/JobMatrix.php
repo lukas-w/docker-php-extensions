@@ -98,20 +98,6 @@ class JobMatrix
 		return true; // All keys match
 	}
 
-	public function pin(string $key, mixed $value): self
-	{
-		if (!array_key_exists($key, $this->vars)) {
-			throw new \InvalidArgumentException("Pin key '$key' not in job matrix.");
-		}
-		return (new JobMatrix(
-			vars: [
-				...$this->vars,
-				$key => [$value],
-			],
-			exclude: array_filter($this->exclude, fn($c) => $c[$key] !== $value),
-		))->cleanup();
-	}
-
 	public function exclude(array $partialConf): self
 	{
 		foreach ($partialConf as $key => $value) {

@@ -68,14 +68,7 @@ class ExtRef
 			);
 		}
 
-		$channels = [
-			'alpha',
-			'beta',
-			'stable',
-			'snapshot',
-			'devel'
-		];
-		$channel_pattern = "(?<channel>" . implode('|', $channels) . ")";
+		$channel_pattern = self::channelPattern();
 		$version_pattern = "(?<compatible>\^)?(?<version>[^\-@]+)";
 
 		$variants = [
@@ -104,7 +97,7 @@ class ExtRef
 		throw new RuntimeException("Invalid version spec: $version_spec");
 	}
 
-	private static function channelPattern()
+	private static function channelPattern(): string
 	{
 		return '(?<channel>' . implode('|', self::CHANNELS) . ')';
 	}

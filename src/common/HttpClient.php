@@ -82,7 +82,7 @@ class HttpClient
 
 	public function request(string $method, string $path, array $headers = []): string
 	{
-		return $this->exec($path, method: $method)[1];
+		return $this->exec($path, method: $method, headers: $headers)[1];
 	}
 
 	protected function checkResponseCode(string $method, string $path, ?int $code = null): void

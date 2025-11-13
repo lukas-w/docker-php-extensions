@@ -70,45 +70,6 @@ function printConfigs(string $extension, array $phpVersions, array $osTargets, a
 	}
 }
 
-function applyFailList(string $extension, JobMatrix $matrix): JobMatrix
-{
-	$fl = file_get_contents(__DIR__ . '/../../data/fail-list.json');
-	$fl = json_decode($fl, true);
-	if (!is_array($fl)) {
-		throw new RuntimeException("Unexpected fail-list.yaml contents");
-	}
-	$fl = $fl[$extension] ?? [];
-
-	$ext_versions = $matrix->vars['ext_version'] ?? [];
-
-	$fl_v_expanded = [];
-	foreach ($fl as $f) {
-		$v = $f['ext_version'] ?? null;
-		if (is_array($v)) {
-			[$op, $cmpV] = $v;
-			$op = match($op) {
-				'<' => -1,
-				'>' => 1,
-				default => throw new RuntimeException("Unknown operator: $op"),
-			};
-			foreach ($ext_versions as $ext_version) {
-				if (VersionTools::compare($ext_version, $cmpV) === $op) {
-					$fl_v_expanded[] = [
-						...$f,
-						'ext_version' => $ext_version,
-					];
-				}
-			}
-		}
-	}
-	$fl = [...$fl, ...$fl_v_expanded];
-
-	foreach ($fl as $f) {
-		$matrix = $matrix->exclude($f);
-	}
-	return $matrix;
-}
-
 function getBundledExtensions(Target $target): array
 {
 	$targetStr = $target->toString();
@@ -235,13 +196,6 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 		}
 	}
 
-	function osToString(array $conf): array
-	{
-		if (array_key_exists('os', $conf)) {
-			return [...$conf, 'os' => Target::osRef(...$conf['os'])];
-		}
-		return $conf;
-	}
 
 	if (! $config->ignoreExistingImages) {
 		$m = excludeBuiltConfigs($extension, $m);
@@ -279,7 +233,6 @@ function excludeBuiltConfigs(string $ext, JobMatrix $matrix): JobMatrix
 			osVersion: $conf['os'][1],
 //			platform: $conf['platform'],
 		);
-		$extRef = $ext . '-' . $conf['ext_version'];
 
 		$name = $config->imageName($target, $ext, $conf['ext_version']);
 		$tag = $config->imageTag($target, $ext, $conf['ext_version']);
@@ -293,28 +246,6 @@ function excludeBuiltConfigs(string $ext, JobMatrix $matrix): JobMatrix
 	}
 
 	return $matrix;
-}
-
-function allBuilt(string $ext, array $matrix): bool
-{
-	global $config, $registry;
-	foreach (IterTools::product(...$matrix) as $job) {
-		$target = new Target(
-			phpVersion: $job['php'],
-			osId: $job['os'][0],
-			osVersion: $job['os'][1],
-//			platform: $job['platform'],
-		);
-		$extRef = $ext . '-' . $job['ext_version'];
-		if (!$registry->hasImage(
-			$config->imageNamespace,
-			$config->imageName($target, $ext, $job['ext_version']),
-			$config->imageTag($target, $ext, $job['ext_version']),
-		)) {
-			return false;
-		}
-	}
-	return true;
 }
 
 function dockerConfig(
