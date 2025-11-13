@@ -120,4 +120,59 @@ class JobMatrixTest extends TestCase
 		$m3 = $m2->exclude(['php' => '8.0', 'ext' => 'extA']);
 		$this->assertEquals(['7.4', '8.1'], $m3->vars['php']);
 	}
+
+	public function testImplode(): void
+	{
+		$m = new JobMatrix(
+			vars: [
+				'php' => ['7.4', '8.0', '8.1'],
+				'ext' => ['extA', 'extB'],
+				'arch' => ['x86', 'arm'],
+			],
+		);
+		$this->assertCount(12, [...$m->configs()]);
+		$m = $m->implode('arch', ',');
+		$this->assertCount(6, [...$m->configs()]);
+		$this->assertEquals(['x86,arm'], $m->vars['arch']);
+
+
+		$m = new JobMatrix(
+			vars: [
+				'php' => ['7.4', '8.0', '8.1'],
+				'ext' => ['extA', 'extB'],
+				'arch' => ['x86', 'arm'],
+			],
+		);
+		$m = $m->exclude(['ext' => 'extB', 'arch' => 'arm']);
+		$this->assertCount(9, [...$m->configs()]);
+		$m = $m->implode('arch', '|');
+		$configs = [...$m->configs()];
+		$this->assertCount(6, $configs);
+		$this->assertContainsEquals(['php' => '7.4', 'ext' => 'extA', 'arch' => 'x86|arm'], $configs);
+		$this->assertContainsEquals(['php' => '8.0', 'ext' => 'extA', 'arch' => 'x86|arm'], $configs);
+		$this->assertContainsEquals(['php' => '8.1', 'ext' => 'extA', 'arch' => 'x86|arm'], $configs);
+		$this->assertContainsEquals(['php' => '7.4', 'ext' => 'extB', 'arch' => 'x86'], $configs);
+		$this->assertContainsEquals(['php' => '8.0', 'ext' => 'extB', 'arch' => 'x86'], $configs);
+		$this->assertContainsEquals(['php' => '8.1', 'ext' => 'extB', 'arch' => 'x86'], $configs);
+
+
+		$m = new JobMatrix(
+			vars: [
+				'php' => ['7.4', '8.0', '8.1'],
+				'ext' => ['extA', 'extB'],
+				'arch' => ['x86', 'arm'],
+			],
+		);
+		$m = $m->exclude(['ext' => 'extB', 'arch' => 'arm', 'php' => '7.4']);
+		$this->assertCount(11, [...$m->configs()]);
+		$m = $m->implode('arch', '|');
+		$configs = [...$m->configs()];
+		$this->assertCount(6, $configs);
+		$this->assertContainsEquals(['php' => '7.4', 'ext' => 'extA', 'arch' => 'x86|arm'], $configs);
+		$this->assertContainsEquals(['php' => '8.0', 'ext' => 'extA', 'arch' => 'x86|arm'], $configs);
+		$this->assertContainsEquals(['php' => '8.1', 'ext' => 'extA', 'arch' => 'x86|arm'], $configs);
+		$this->assertContainsEquals(['php' => '7.4', 'ext' => 'extB', 'arch' => 'x86'], $configs);
+		$this->assertContainsEquals(['php' => '8.0', 'ext' => 'extB', 'arch' => 'x86|arm'], $configs);
+		$this->assertContainsEquals(['php' => '8.1', 'ext' => 'extB', 'arch' => 'x86|arm'], $configs);
+	}
 }

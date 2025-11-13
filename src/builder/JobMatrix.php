@@ -131,6 +131,42 @@ class JobMatrix
 		return (new JobMatrix($this->vars, $this->exclude, [...$this->include, $includeConf]))->cleanup();
 	}
 
+	public function implode(string $var, string $separator): self
+	{
+		if (! array_key_exists($var, $this->vars)) {
+			throw new \InvalidArgumentException("Implode key '$var' not in job matrix.");
+		}
+
+		$values = $this->vars[$var];
+
+		$m = new JobMatrix(
+			vars: [...$this->vars, $var => [implode($separator, $values)]],
+			exclude: array_filter($this->exclude, fn(array $e) => !array_key_exists($var, $e)),
+		);
+
+		$restVars = [...$this->vars];
+		unset($restVars[$var]);
+		foreach (IterTools::product(...$restVars) as $partialConfig) {
+			$includedValues = [];
+			$excludedValues = [];
+			foreach ($values as $v) {
+				$c = [...$partialConfig, $var => $v];
+				if (! $this->excludes($c)) {
+					$includedValues[] = $v;
+				} else {
+					$excludedValues[] = $v;
+				}
+			}
+
+			if (!empty($excludedValues)) {
+				$m = $m->exclude($partialConfig);
+				$m = $m->include([...$partialConfig, $var => implode($separator, $includedValues)]);
+			}
+		}
+
+		return $m->cleanup();
+	}
+
 	private function cleanup(): self
 	{
 		return $this->knockout()->removeRedundantExcludes();
