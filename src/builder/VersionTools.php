@@ -24,6 +24,9 @@ class VersionTools
 
 	public static function compare(string $a, string $b, ?string $op = null): int|bool
 	{
+		if (! in_array($op, [null, '<', '<=', '>', '>=', '=', '==', '~', '~='], true)) {
+			throw new \InvalidArgumentException("Invalid comparison operator: $op");
+		}
 		$a = explode('.', self::normalize($a));
 		$b = explode('.', self::normalize($b));
 
@@ -51,6 +54,7 @@ class VersionTools
 
 		return match ($op) {
 			'=', '==', '>=', '<=', '~', '~=' => true,
+			null => 0,
 			default => false,
 		};
 	}
