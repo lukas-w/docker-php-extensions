@@ -108,6 +108,7 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 		'ext_version' => ['bundled'],
 		'php' => $phpVersions,
 		'os' => $osTargets,
+		'platform' => $platforms,
 	]);
 	$bundledTargets = [];
 	$allBundled = true;
@@ -182,20 +183,20 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 		}
 	}
 
-	if (!$bundled) {
-		foreach ($m->vars['ext_version'] as $extVersion) {
-			$deps = $pecl->phpDependencies($extension, $extVersion);
-			foreach ($phpVersions as $php) {
-				if (!$deps->satisfiedBy($php)) {
-					$m = $m->exclude([
-						'ext_version' => $extVersion,
-						'php' => $php,
-					]);
-				}
+	foreach ($m->vars['ext_version'] as $extVersion) {
+		if ($extVersion === 'bundled') {
+			continue;
+		}
+		$deps = $pecl->phpDependencies($extension, $extVersion);
+		foreach ($phpVersions as $php) {
+			if (!$deps->satisfiedBy($php)) {
+				$m = $m->exclude([
+					'ext_version' => $extVersion,
+					'php' => $php,
+				]);
 			}
 		}
 	}
-
 
 	if (! $config->ignoreExistingImages) {
 		$m = excludeBuiltConfigs($extension, $m);
@@ -217,6 +218,8 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 	$num = array_reduce($m->vars, fn($carry, $item) => $carry * count($item), 1) - count($m->exclude);
 	error_log("Total: $num");
 
+	$m = $m->implode('platform', ',');
+
 	echo $m->toJson();
 }
 
@@ -236,7 +239,8 @@ function excludeBuiltConfigs(string $ext, JobMatrix $matrix): JobMatrix
 
 		$name = $config->imageName($target, $ext, $conf['ext_version']);
 		$tag = $config->imageTag($target, $ext, $conf['ext_version']);
-		if ($registry->hasImage($config->imageNamespace, $name, $tag)) {
+		$platform = $conf['platform'];
+		if ($registry->hasImage($config->imageNamespace, $name, $tag, $platform)) {
 			$builtConfigs[] = $conf;
 		}
 	}

@@ -20,9 +20,24 @@ class DockerRegistryClient
 	/**
 	 * @throws JsonException
 	 */
-	public function hasImage(string $namespace, string $image, string $tag = "latest"): bool
+	public function hasImage(string $namespace, string $image, string $tag = "latest", ?string $platform = null): bool
 	{
-		return in_array($tag, $this->tagsList($namespace . '/' . $image), true);
+		if (! in_array($tag, $this->tagsList($namespace . '/' . $image), true)) {
+			return false;
+		}
+		if ($platform !== null) {
+			$manifest = $this->manifest($namespace . '/' . $image, $tag);
+			if ($manifest === null) {
+				throw new RuntimeException("Manifest not found for $namespace/$image:$tag");
+			}
+			[$os, $arch] = explode('/', $platform, 2);
+			foreach ($manifest['manifests'] as $m) {
+				if ($m['platform']['architecture'] === $arch && $m['platform']['os'] === $os) {
+					return true;
+				}
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -51,11 +66,10 @@ class DockerRegistryClient
 	public function manifest(string $image, string $tag): ?array
 	{
 		try {
-			$this->client->headers['Accept'] = 'application/vnd.docker.distribution.manifest.v2+json';
 			return $this->client->getJson(
 				$image . '/manifests/' . $tag,
 				headers: [
-					'Accept' => 'application/vnd.docker.distribution.manifest.v2+json',
+					'Accept' => 'application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.index.v1+json',
 				]
 			);
 		} catch (RuntimeException $e) {
