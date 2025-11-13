@@ -80,8 +80,8 @@ class ExtRef
 
 		$variants = [
 			"/^$version_pattern@$channel_pattern$/", // Version with channel, e.g. ^2.8@stable
-			"/^$version_pattern$/", // Version only, e.g. ^2.8, 2.8.1
 			"/^$channel_pattern$/", // Channel only, e.g. stable
+			"/^$version_pattern$/", // Version only, e.g. ^2.8, 2.8.1
 		];
 
 		foreach ($variants as $variant) {
