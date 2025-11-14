@@ -49,7 +49,7 @@ jobs:
       - name: Fetch dependencies
         run: |
           make all
-          composer install --no-interaction
+          composer install --no-interaction --no-dev
 
       - name: Get tags to push
         id: get-tags
