@@ -17,9 +17,10 @@ excimer	<1.2.2	>=8.4
 gnupg	<1.5
 grpc	<1.58,1.62,1.63,1.64
 igbinary	<3.11
-ip2location	<8.0	<7.0
-ip2location	<8.1	>=8.4
-imagick	<3.5
+ip2location	<8.0	>=7.0
+ip2location	<8.1	>=8.1
+imagick	<3.5	>=8.0
+imagick	<3.6	>=8.1
 imagick	<3.8	>=8.4
 inotify	<3.0
 jsonpath	>=2.0	<8.0
