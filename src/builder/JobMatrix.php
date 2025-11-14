@@ -2,7 +2,9 @@
 
 namespace dpe\builder;
 
-class JobMatrix
+use Countable;
+
+class JobMatrix implements Countable
 {
 	public function __construct(
 		public readonly array $vars,
@@ -23,11 +25,25 @@ class JobMatrix
 	 */
 	public function toJson(): string
 	{
-		return json_encode([
+		return json_encode($this->toArray(), JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
+	}
+
+	public function toArray(): array
+	{
+		return [
 			...array_map(fn($values) => array_values($values), $this->vars),
 			'exclude' => $this->exclude,
 			'include' => $this->include,
-		], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
+		];
+	}
+
+	public function count(): int
+	{
+		$count = 0;
+		foreach ($this->configs() as $ignored) {
+			$count++;
+		}
+		return $count;
 	}
 
 	public function configs(): iterable

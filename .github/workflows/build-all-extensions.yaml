@@ -16,7 +16,7 @@ on:
       ignore_existing_images:
         type: boolean
         default: false
-        description: Whether to ignore existing images in the registry and rebuild them
+        description: Ignore existing images
 env:
   IMAGE_DOMAIN: ghcr.io
   IMAGE_NAMESPACE: ${{ github.repository_owner }}

@@ -215,12 +215,13 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 		)
 	);
 
-	$num = array_reduce($m->vars, fn($carry, $item) => $carry * count($item), 1) - count($m->exclude);
-	error_log("Total: $num");
-
-//	$m = $m->implode('platform', ',');
-
-	echo $m->toJson();
+	echo json_encode(
+		[
+			'matrix' => $m->toArray(),
+			'count' => count($m),
+		],
+		JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
+	);
 }
 
 function excludeBuiltConfigs(string $ext, JobMatrix $matrix): JobMatrix

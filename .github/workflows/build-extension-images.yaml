@@ -20,7 +20,7 @@ on:
       ignore_existing_images:
         type: boolean
         default: false
-        description: Whether to ignore existing images in the registry and rebuild them
+        description: Rebuild existing images
   workflow_call:
     inputs:
       ext_name:
@@ -43,7 +43,8 @@ jobs:
   matrix:
     runs-on: ubuntu-24.04
     outputs:
-      matrix: ${{ steps.get-matrix.outputs.result }}
+      matrix: ${{ steps.get-matrix.outputs.matrix }}
+      count: ${{ steps.get-matrix.outputs.count }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,14 +59,17 @@ jobs:
         env:
           DPE_IGNORE_EXISTING_IMAGES: ${{ inputs.ignore_existing_images }}
         run: |
+          out=$(php src/builder/main.php matrix ${{ inputs.ext_name }} ${{ inputs.php_versions }} ${{ inputs.os_targets }} ${{ inputs.platforms }})
+          echo "count=$(echo "$out" | jq -r '.count')" >> $GITHUB_OUTPUT
           {
-            echo 'result<<EOF'
-            php src/builder/main.php matrix ${{ inputs.ext_name }} ${{ inputs.php_versions }} ${{ inputs.os_targets }} ${{ inputs.platforms }}
+            echo 'matrix<<EOF'
+            echo $(echo "$out" | jq -r '.matrix')
             echo -e "\nEOF"
           } >> "$GITHUB_OUTPUT"
 
   build:
     needs: [matrix]
+    if: ${{ fromJson(needs.matrix.outputs.count) > 0 }}
     strategy:
       matrix: ${{ fromJson(needs.matrix.outputs.matrix) }}
       fail-fast: false
