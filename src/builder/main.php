@@ -215,6 +215,8 @@ function matrix(string $extension, array $phpVersions, array $osTargets, array $
 		)
 	);
 
+	$m = $m->implode('platform', ',');
+
 	echo json_encode(
 		[
 			'matrix' => $m->toArray(),
@@ -332,6 +334,55 @@ function listExtensions(?array $phpVersions): void
 	echo "\n";
 }
 
+function getImageDigests(ExtRef $extRef, Target $target, ?array $platforms, bool $excludePlatforms): array
+{
+	global $config, $registry;
+
+	$image = $config->imagePath($target, $extRef->name, $extRef->version ?? '');
+	$tag = $config->imageTag($target, $extRef->name, $extRef->version ?? '');
+	$manifest = $registry->manifest($image, $tag);
+	if (! $manifest) {
+		throw new RuntimeException("Manifest not found for image $image:$tag");
+	}
+	$manifest = $manifest['manifests'];
+
+	if ($platforms) {
+		$filteredManifest = array_filter($manifest, static function ($m) use ($platforms, $excludePlatforms) {
+			foreach ($platforms as $p) {
+				[$os, $arch] = explode('/', $p, 2);
+				$match = $m['platform']['architecture'] === $arch && $m['platform']['os'] === $os;
+				if ($excludePlatforms && $match) {
+					return false;
+				}
+				if (!$excludePlatforms && $match) {
+					return true;
+				}
+			}
+			if ($excludePlatforms) {
+				return true;
+			} else {
+				return false;
+			}
+		});
+
+		$digests = array_map(static fn($manifest) => $manifest['digest'], $filteredManifest);
+		// Add attestation manifests
+		foreach ($manifest as $m) {
+			$annotations = $m['annotations'] ?? [];
+			if (($annotations['vnd.docker.reference.type'] ?? null) === 'attestation-manifest' &&
+			    in_array($annotations['vnd.docker.reference.digest'] ?? null, $digests, true)
+			) {
+				$filteredManifest[] = $m;
+			}
+		}
+		$manifest = $filteredManifest;
+	}
+
+	$digests = array_values(array_map(static fn ($m) => $m['digest'], $manifest));
+
+	return $digests;
+}
+
 function main(): int
 {
 	global $argv;
@@ -351,6 +402,24 @@ function main(): int
 		$tags = VersionTools::getVersionTags($versions);
 		echo json_encode($tags, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);
 		echo "\n";
+		return 0;
+	}
+
+	if ($cmd === 'get-image-name') {
+		global $config;
+		$extRef = ExtRef::parse($extension);
+		$target = array_shift($argv);
+		$target = Target::fromString($target);
+		echo $config->imageName($target, $extRef->name, $extRef->version ?? '') . "\n";
+		return 0;
+	}
+
+	if ($cmd === 'get-image-ref') {
+		global $config;
+		$extRef = ExtRef::parse($extension);
+		$target = array_shift($argv);
+		$target = Target::fromString($target);
+		echo $config->imageRef($target, $extRef->name, $extRef->version ?? '') . "\n";
 		return 0;
 	}
 
@@ -376,6 +445,27 @@ function main(): int
 			$result = $tags;
 		}
 		echo json_encode($result, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);
+		echo "\n";
+		return 0;
+	}
+
+	if ($cmd === 'get-image-digests') {
+		$extRef = ExtRef::parse($extension);
+		$target = array_shift($argv);
+		$target = Target::fromString($target);
+		$platforms = array_shift($argv);
+
+		$excludePlatforms = false;
+		if ($platforms) {
+			if ($platforms[0] === '!') {
+				$excludePlatforms = true;
+				$platforms = substr($platforms, 1);
+			}
+			$platforms = explode(',', $platforms);
+		}
+		$digests = getImageDigests($extRef, $target, $platforms, $excludePlatforms);
+
+		echo json_encode($digests, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);
 		echo "\n";
 		return 0;
 	}

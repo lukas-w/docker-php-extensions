@@ -34,20 +34,32 @@ class Config
 		};
 	}
 
-	public function imageRef(Target $target, string $extName, string $extVersion): string
+	public function imagePath(Target $target, string $extName, string $extVersion): string
 	{
-		$tagTemplate = $extVersion ? $this->imageTagTemplate : $this->imageTagLatestTemplate;
-		return sprintf("%s/%s/%s:%s",
-			$this->imageDomain,
+		return sprintf("%s/%s",
 			$this->imageNamespace,
-			$this->formatTemplateString($this->imageNameTemplate, $target, $extName, $extVersion),
-			$this->formatTemplateString($tagTemplate, $target, $extName, $extVersion),
+			$this->imageName($target, $extName, $extVersion),
 		);
+	}
+
+	public function imageRef(Target $target, string $extName, string $extVersion, bool $withTag=true): string
+	{
+		$ref = sprintf("%s/%s",
+			$this->imageDomain,
+			$this->imagePath($target, $extName, $extVersion),
+		);
+		if ($withTag) {
+			$ref .= ':' . $this->imageTag($target, $extName, $extVersion);
+		}
+		return $ref;
 	}
 
 	public function imageTag(Target $target, string $extName, string $extVersion): string
 	{
-		return $this->formatTemplateString($this->imageTagTemplate, $target, $extName, $extVersion);
+		$tagTemplate = ($extVersion && $extVersion !== 'bundled')
+			? $this->imageTagTemplate
+			: $this->imageTagLatestTemplate;
+		return $this->formatTemplateString($tagTemplate, $target, $extName, $extVersion);
 	}
 
 	public function imageTagLatest(Target $target, string $extName): string

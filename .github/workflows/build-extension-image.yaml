@@ -27,7 +27,7 @@ on:
       push:
         required: false
         type: boolean
-        default: false
+        default: true
         description: Whether to push the built image to the registry
   workflow_dispatch:
     inputs: *inputs
@@ -36,9 +36,67 @@ env:
   IMAGE_NAMESPACE: ${{ github.repository_owner }}
   IMAGE_SOURCE: ${{ github.server_url }}/${{ github.repository }}
   TARGET: ${{ inputs.php }}-${{ inputs.os }}
+  EXT_REF: ${{ inputs.ext_name }}-${{ inputs.ext_version }}
 jobs:
+  meta:
+    runs-on: ubuntu-22.04
+    outputs:
+      image_name: ${{ steps.get-metadata.outputs.image_name }}
+      image_refs: ${{ steps.get-metadata.outputs.image_refs }}
+      image_ref: ${{ steps.get-metadata.outputs.image_ref }}
+      image: ${{ steps.get-metadata.outputs.image }}
+      arches: ${{ steps.get-metadata.outputs.arches }}
+      platforms: ${{ steps.get-metadata.outputs.platforms }}
+      existing_sources: ${{ steps.get-metadata.outputs.existing_sources }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch dependencies
+        run: |
+          make all
+          composer install --no-interaction --no-dev
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.IMAGE_DOMAIN }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get metadata
+        id: get-metadata
+        run: |
+          platforms=$(jq -Rc 'split(",")' <<< "${{ inputs.platforms }}")
+          arches=$(jq -c '[ .[] | split("/")[1] ]' <<< "$platforms")
+          image_name=$(php src/builder/main.php get-image-name "$EXT_REF" "$TARGET")
+          image_ref=$(php src/builder/main.php get-image-ref "$EXT_REF" "$TARGET")
+          image="${{ env.IMAGE_DOMAIN }}/${{ env.IMAGE_NAMESPACE }}/$image_name"
+          echo "platforms=$platforms" >> "$GITHUB_OUTPUT"
+          echo "arches=$arches" >> "$GITHUB_OUTPUT"
+          echo "image_name=$image_name" >> "$GITHUB_OUTPUT"
+          echo "image_ref=$image_ref" >> "$GITHUB_OUTPUT"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          {
+            echo 'image_refs<<EOF'
+            php src/builder/main.php get-image-refs "$EXT_REF" "$TARGET"
+            echo -e "\nEOF"
+          } >> "$GITHUB_OUTPUT"
+          
+          {
+            echo 'existing_sources<<EOF'
+            digests=$(php src/builder/main.php get-image-digests "$EXT_REF" "$TARGET" "!${{ inputs.platforms }}")
+            sources=$(jq "map(\"$image@\" + .)" <<< "$digests")
+            echo "$sources"
+            echo -e "\nEOF"
+          } >> "$GITHUB_OUTPUT"
+
   build:
+    needs: [meta]
     runs-on: ${{ inputs.platforms == 'linux/arm64' && 'ubuntu-22.04-arm' || 'ubuntu-22.04' }}
+    strategy:
+      matrix:
+        arch: ${{ fromJson(needs.meta.outputs.arches) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,28 +104,19 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Fetch dependencies
-        run: |
-          make all
-          composer install --no-interaction --no-dev
-
-      - name: Get tags to push
-        id: get-tags
-        run: |
-          {
-            echo 'result<<EOF'
-            php src/builder/main.php get-image-refs ${{ inputs.ext_name }}-${{ inputs.ext_version }} ${{ env.TARGET }}
-            echo -e "\nEOF"
-          } >> "$GITHUB_OUTPUT"
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.IMAGE_DOMAIN }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/build-push-action@v6
+      - name: Fetch dependencies
+        run: |
+          make all
+
+      - id: build
+        uses: docker/build-push-action@v6
         with:
           context: builder/alpine
           build-contexts: |
@@ -77,13 +126,71 @@ jobs:
             EXT_VERSION=${{ inputs.ext_version }}
             PHP_VERSION=${{ inputs.php }}
             OS_REF=${{ inputs.os }}
-          push: ${{ inputs.push }}
-          tags: ${{ join(fromJson(steps.get-tags.outputs.result), ',') }}
-          platforms: ${{ inputs.platforms }}
-          labels: |
-            org.opencontainers.image.source=${{ env.IMAGE_SOURCE }}
-          cache-from: gha
-          cache-to: type=gha,mode=max
+          platforms: linux/${{ matrix.arch }}
+          tags: ${{ needs.meta.outputs.image }}
+          cache-from: |
+            ${{ needs.meta.outputs.image }}
+            gha
+          cache-to: |
+            ${{ needs.meta.outputs.image }}
+            type=gha,mode=max
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
         env:
           DOCKER_BUILD_RECORD_UPLOAD: "false"
           DOCKER_BUILD_SUMMARY: "false"
+
+      - name: Export digest
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+#          attestation_digests=$(jq -r '."buildx.build.provenance".materials[] | .digest.sha256' <<< '${{ steps.build.outputs.metadata }}')
+#          for sha in $attestation_digests; do
+#            touch "${{ runner.temp }}/digests/$sha"
+#          done
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    if: ${{ inputs.push }}
+    runs-on: ubuntu-22.04
+    needs: [build, meta]
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v6
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.IMAGE_DOMAIN }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create manifest list and push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr 'map("-t " + .) | join(" ")' <<< '${{ needs.meta.outputs.image_refs }}') \
+            --annotation 'index:org.opencontainers.image.source=${{ env.IMAGE_SOURCE }}' \
+            ${{ join(fromJson(needs.meta.outputs.existing_sources), ' ') }}  \
+            $(printf '${{ needs.meta.outputs.image }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ needs.meta.outputs.image_ref }}
