@@ -93,7 +93,7 @@ jobs:
 
   build:
     needs: [meta]
-    runs-on: ${{ inputs.platforms == 'linux/arm64' && 'ubuntu-22.04-arm' || 'ubuntu-22.04' }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-22.04-arm' || 'ubuntu-22.04' }}
     strategy:
       matrix:
         arch: ${{ fromJson(needs.meta.outputs.arches) }}
