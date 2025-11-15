@@ -37,6 +37,7 @@ env:
   IMAGE_SOURCE: ${{ github.server_url }}/${{ github.repository }}
   TARGET: ${{ inputs.php }}-${{ inputs.os }}
   EXT_REF: ${{ inputs.ext_name }}-${{ inputs.ext_version }}
+  JOB_SLUG: ${{ inputs.ext_name }}-${{ inputs.ext_version }}-${{ inputs.php }}-${{ inputs.os }}
 jobs:
   meta:
     runs-on: ubuntu-22.04
@@ -148,7 +149,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ matrix.arch }}
+          name: digests-${{ env.JOB_SLUG }}-${{ matrix.arch }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -162,7 +163,7 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           path: ${{ runner.temp }}/digests
-          pattern: digests-*
+          pattern: digests-${{ env.JOB_SLUG }}-*
           merge-multiple: true
 
       - name: Login to GitHub Container Registry
