@@ -175,6 +175,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          version: v0.29.1 # https://github.com/docker/buildx/issues/3503
 
       - name: Checkout
         uses: actions/checkout@v4
