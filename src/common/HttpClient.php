@@ -71,7 +71,7 @@ class HttpClient
 
 	public function get(string $path, bool $checkCode = true, mixed $out = null, array $headers = []): ?string
 	{
-		[$code, $response] = $this->exec($path, $out, headers: $headers);
+		[$code, $response, $responseHeaders] = $this->exec($path, $out, headers: $headers);
 
 		if ($checkCode) {
 			$this->checkResponseCode('GET', $path, $code);

@@ -39,10 +39,10 @@ class DockerRegistryHttpClient extends HttpClient
 			}
 			$this->requestToken($path, $wwwAuth);
 			// Retry
-			return $this->exec($path, $out);
+			return $this->exec($path, $out, $method, $headers);
 		}
 
-		return [$code, $response];
+		return [$code, $response, $responseHeaders];
 	}
 
 	/**
