@@ -37,7 +37,7 @@ class DockerRegistryClient
 				}
 			}
 		}
-		return true;
+		return false;
 	}
 
 	/**

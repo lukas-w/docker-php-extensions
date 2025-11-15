@@ -348,9 +348,12 @@ function getImageDigests(ExtRef $extRef, Target $target, ?array $platforms, bool
 
 	if ($platforms) {
 		$filteredManifest = array_filter($manifest, static function ($m) use ($platforms, $excludePlatforms) {
+			$manifestPlatform = $m['platform']['os'] . '/' . $m['platform']['architecture'];
+			if ($manifestPlatform === 'unknown/unknown') {
+				return false;
+			}
 			foreach ($platforms as $p) {
-				[$os, $arch] = explode('/', $p, 2);
-				$match = $m['platform']['architecture'] === $arch && $m['platform']['os'] === $os;
+				$match = $manifestPlatform === $p;
 				if ($excludePlatforms && $match) {
 					return false;
 				}
