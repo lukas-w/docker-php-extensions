@@ -79,5 +79,7 @@ jobs:
       ext_version: ${{ matrix.ext_version }}
       php: ${{ matrix.php }}
       os: ${{ matrix.os }}
-      platforms: ${{ matrix.platform }}
+      # Always build all platforms to create multi-arch images. While merging manifest with existing digests using
+      # `docker buildx imagetools create` works, it loses annotations of existing images.
+      platforms: ${{ inputs.platforms }}
       push: true

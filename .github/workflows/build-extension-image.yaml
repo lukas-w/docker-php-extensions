@@ -144,10 +144,6 @@ jobs:
           mkdir -p ${{ runner.temp }}/digests
           digest="${{ steps.build.outputs.digest }}"
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
-#          attestation_digests=$(jq -r '."buildx.build.provenance".materials[] | .digest.sha256' <<< '${{ steps.build.outputs.metadata }}')
-#          for sha in $attestation_digests; do
-#            touch "${{ runner.temp }}/digests/$sha"
-#          done
 
       - name: Upload digest
         uses: actions/upload-artifact@v4
